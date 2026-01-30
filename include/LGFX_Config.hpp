@@ -33,12 +33,12 @@ public:
     { // Display Panel Configuration
       auto cfg = _panel_instance.config();
 
-      cfg.pin_cs           =     5;  // CS pin (GPIO 5)
-      cfg.pin_rst          =     4;  // RST pin (GPIO 4)
+      cfg.pin_cs           =    -1;  // CS pin (GPIO 5)
+      cfg.pin_rst          =    -1;  // RST pin (GPIO 4)
       cfg.pin_busy         =    -1;  // BUSY pin (-1 = disable)
 
-      cfg.panel_width      =   240;  // Display width
-      cfg.panel_height     =   320;  // Display height
+      cfg.panel_width      =   128;  // Display width
+      cfg.panel_height     =   64;  // Display height
       cfg.offset_x         =     0;  // X offset
       cfg.offset_y         =     0;  // Y offset
       cfg.offset_rotation  =     0;  // Rotation offset (0~7)

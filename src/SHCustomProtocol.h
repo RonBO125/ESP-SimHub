@@ -14,12 +14,12 @@
 static LGFX tft;
 
 
-static const int SCREEN_WIDTH = 240;
-static const int SCREEN_HEIGHT = 320;
+static const int SCREEN_WIDTH = 128;
+static const int SCREEN_HEIGHT = 64;
 static const int X_CENTER = SCREEN_WIDTH / 2;
 static const int Y_CENTER = SCREEN_HEIGHT / 2;
-static const int ROWS = 2;
-static const int COLS = 3;
+static const int ROWS = 1;
+static const int COLS = 2;
 static const int CELL_WIDTH = SCREEN_WIDTH / COLS;
 static const int HALF_CELL_WIDTH = CELL_WIDTH / 2;
 static const int CELL_HIGHT = SCREEN_HEIGHT / ROWS;
@@ -133,7 +133,7 @@ public:
 	// but it's called between each command sent to the arduino
 	void loop()
 	{
-		drawRpmMeter(0, 0, SCREEN_WIDTH, HALF_CELL_HIGHT);
+		//drawRpmMeter(0, 0, SCREEN_WIDTH, HALF_CELL_HIGHT);
 		drawGear(COL[0], ROW[0]);
 		
 		// First+Second Column (Lap times)
