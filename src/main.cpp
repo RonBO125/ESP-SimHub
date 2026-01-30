@@ -1,6 +1,50 @@
 #include <Arduino.h>
 #include <EspSimHub.h>
 
+/*******************************************************************************
+ * PIN-BELEGUNG ÜBERSICHT - ESP32
+ *******************************************************************************
+ * 
+ * I2C (OLED Display):
+ *   GPIO 21 - SDA
+ *   GPIO 22 - SCL
+ * 
+ * Button Matrix (4x3 = 12 Buttons):
+ *   Columns:
+ *     GPIO 16 - Column 1
+ *     GPIO 17 - Column 2
+ *     GPIO 18 - Column 3
+ *     GPIO 19 - Column 4
+ *   Rows:
+ *     GPIO 25 - Row 1
+ *     GPIO 26 - Row 2
+ *     GPIO 27 - Row 3
+ * 
+ *   Matrix Layout:
+ *              Col1(16)  Col2(17)  Col3(18)  Col4(19)
+ *     Row1(25)  Btn 1     Btn 2     Btn 3     Btn 4
+ *     Row2(26)  Btn 5     Btn 6     Btn 7     Btn 8
+ *     Row3(27)  Btn 9     Btn 10    Btn 11    Btn 12
+ * 
+ * Encoder 1 (EC11):
+ *   GPIO 32 - CLK (A)
+ *   GPIO 33 - DT (B)
+ *   GPIO 35 - Button (SW) - Input-only
+ * 
+ * Encoder 2 (EC11):
+ *   GPIO 34 - CLK (A) - Input-only
+ *   GPIO 36 - DT (B) - Input-only
+ *   GPIO 39 - Button (SW) - Input-only
+ * 
+ * RGB LEDs (PL9823):
+ *   GPIO 23 - Data (10 LEDs)
+ * 
+ * Freie Pins:
+ *   GPIO 0, 2, 4, 5, 12, 13, 14, 15
+ * 
+ * Hinweis: GPIO 34-39 sind nur Input-Pins (kein Pull-up möglich)
+ * 
+ ******************************************************************************/
 
 /**
  * Enable ESP-NOW or WiFi or use Serial
@@ -54,7 +98,7 @@ FullLoopbackStream incomingStream;
 
 
 // Title of the device
-#define DEVICE_NAME "ESP-SimHub Device" //{"Group":"General","Name":"DEVICE_NAME","Title":"Device name,\r\n make sure to use a unique name when using multiple arduinos","DefaultValue":"SimHub Dash","Type":"string","Template":"#define DEVICE_NAME \"{0}\""}
+#define DEVICE_NAME "GT Wheel" //{"Group":"General","Name":"DEVICE_NAME","Title":"Device name,\r\n make sure to use a unique name when using multiple arduinos","DefaultValue":"SimHub Dash","Type":"string","Template":"#define DEVICE_NAME \"{0}\""}
 
 // Known working features:
 //  
@@ -62,7 +106,7 @@ FullLoopbackStream incomingStream;
 //#define INCLUDE_WS2812B                     // consider using INCLUDE_RGB_LEDS_NEOPIXELBUS {"Name":"INCLUDE_WS2812B","Type":"autodefine","Condition":"[WS2812B_RGBLEDCOUNT]>0"}
 //#define INCLUDE_WS2812B_MATRIX              //{"Name":"INCLUDE_WS2812B_MATRIX","Type":"autodefine","Condition":"[WS2812B_MATRIX_ENABLED]>0"}
 //#define INCLUDE_BUTTONS                     //{"Name":"INCLUDE_BUTTONS","Type":"autodefine","Condition":"[ENABLED_BUTTONS_COUNT]>0","IsInput":true}
-//#define INCLUDE_BUTTONMATRIX                //{"Name":"INCLUDE_BUTTONMATRIX","Type":"autodefine","Condition":"[ENABLED_BUTTONMATRIX]>0","IsInput":true}
+#define INCLUDE_BUTTONMATRIX                  {"Name":"INCLUDE_BUTTONMATRIX","Type":"autodefine","Condition":"[ENABLED_BUTTONMATRIX]>0","IsInput":true}
 //#define INCLUDE_TM1637                      //{"Name":"INCLUDE_TM1637","Type":"autodefine","Condition":"[TM1637_ENABLEDMODULES]>0"}
 //#define INCLUDE_TM1638                      //{"Name":"INCLUDE_TM1638","Type":"autodefine","Condition":"[TM1638_ENABLEDMODULES]>0"}
 //#define INCLUDE_OLED                        //{"Name":"INCLUDE_OLED","Type":"autodefine","Condition":"[ENABLED_OLEDLCD]>0"}
@@ -83,7 +127,7 @@ FullLoopbackStream incomingStream;
 // Untested features, please open a GitHub Issue, or post in the discord if you try them
 //
 //#define INCLUDE_WS2801                      //{"Name":"INCLUDE_WS2801","Type":"autodefine","Condition":"[WS2801_RGBLEDCOUNT]>0"}
-//#define INCLUDE_PL9823                      //{"Name":"INCLUDE_PL9823","Type":"autodefine","Condition":"[PL9823_RGBLEDCOUNT]>0"}
+#define INCLUDE_PL9823                      //{"Name":"INCLUDE_PL9823","Type":"autodefine","Condition":"[PL9823_RGBLEDCOUNT]>0"}
 //#define INCLUDE_LEDBACKPACK                 //{"Name":"INCLUDE_LEDBACKPACK","Type":"autodefine","Condition":"[ENABLE_ADA_HT16K33_7SEGMENTS]>0 || [ENABLE_ADA_HT16K33_BiColorMatrix]>0"}
 //#define INCLUDE_TM1637_6D                   //{"Name":"INCLUDE_TM1637_6D","Type":"autodefine","Condition":"[TM1637_6D_ENABLEDMODULES]>0"}
 //#define INCLUDE_NOKIALCD                    //{"Name":"INCLUDE_NOKIALCD","Type":"autodefine","Condition":"[ENABLED_NOKIALCD]>0"}
@@ -94,7 +138,7 @@ FullLoopbackStream incomingStream;
 //#define INCLUDE_SHAKEITDKSHIELD             //{"Name":"INCLUDE_SHAKEITDKSHIELD ","Type":"autodefine","Condition":"[DKMOTOR_SHIELDSCOUNT]>0"}
 //#define INCLUDE_SHAKEITMOTOMONSTER          //{"Name":"INCLUDE_SHAKEITMOTOMONSTER","Type":"autodefine","Condition":"[MOTOMONSTER_ENABLED]>0"}
 //#define INCLUDE_SHAKEIDUALVNH5019           //{"Name":"INCLUDE_SHAKEIDUALVNH5019","Type":"autodefine","Condition":"[DUALVNH5019_ENABLED]>0"}
-//#define INCLUDE_ENCODERS                    //{"Name":"INCLUDE_ENCODERS","Type":"autodefine","Condition":"[ENABLED_ENCODERS_COUNT]>0","IsInput":true}
+#define INCLUDE_ENCODERS                    //{"Name":"INCLUDE_ENCODERS","Type":"autodefine","Condition":"[ENABLED_ENCODERS_COUNT]>0","IsInput":true}
 //#define INCLUDE_DM163_MATRIX                //{"Name":"INCLUDE_DM163_MATRIX","Type":"autodefine","Condition":"[DM163_MATRIX_ENABLED]>0"}
 //#define INCLUDE_SUNFOUNDERSH104P_MATRIX     //{"Name":"INCLUDE_SUNFOUNDERSH104P_MATRIX","Type":"autodefine","Condition":"[SUNFOUNDERSH104P_MATRIX_ENABLED]>0"}
 
@@ -368,11 +412,11 @@ SHRGBMatrixNeoPixelFastLed shRGBMatrixWS2812B;
 // -------------------------------------------------------------------------------------------------------
 // PL9823 chained RGBLEDS count
 // 0 disabled, > 0 enabled
-#define PL9823_RGBLEDCOUNT 0 //{"Group":"PL9823 RGB Leds","Name":"PL9823_RGBLEDCOUNT","Title":"PL9823 RGB leds count","DefaultValue":"0","Type":"int","Max":150}
+#define PL9823_RGBLEDCOUNT 10 //{"Group":"PL9823 RGB Leds","Name":"PL9823_RGBLEDCOUNT","Title":"PL9823 RGB leds count","DefaultValue":"0","Type":"int","Max":150}
 #ifdef INCLUDE_PL9823
 #include <Adafruit_NeoPixel.h>
 #include "SHRGBLedsNeoPixel.h"
-#define PL9823_DATAPIN 6     //{"Name":"PL9823_DATAPIN","Title":"Data (DIN) digital pin number","DefaultValue":"6","Type":"pin;PL9823 DATA","Condition":"PL9823_RGBLEDCOUNT>0"}
+#define PL9823_DATAPIN 23    //{"Name":"PL9823_DATAPIN","Title":"Data (DIN) digital pin number","DefaultValue":"6","Type":"pin;PL9823 DATA","Condition":"PL9823_RGBLEDCOUNT>0"}
 #define PL9823_RIGHTTOLEFT 0 //{"Name":"PL9823_RIGHTTOLEFT","Title":"Reverse led order","DefaultValue":"0","Type":"bool","Condition":"PL9823_RGBLEDCOUNT>0"}
 #define PL9823_TESTMODE 0    //{"Name":"PL9823_TESTMODE","Title":"TESTING MODE : Light up all configured leds (in red color) at arduino startup\r\nIt will clear after simhub connection","DefaultValue":"0","Type":"bool","Condition":"PL9823_RGBLEDCOUNT>0"}
 Adafruit_NeoPixel PL9823_strip = Adafruit_NeoPixel(PL9823_RGBLEDCOUNT, PL9823_DATAPIN, NEO_RGB + NEO_KHZ400);
@@ -666,20 +710,20 @@ SHDebouncer ButtonsDebouncer(10);
 // https://www.dx.com/p/ky-040-rotary-encoder-module-brick-sensor-development-for-arduino-avr-pic-420429#.W9BCM0sza0Q
 // Rotary encoders with pull-up resistors on the 3 outputs
 // ----------------------------------------------------------------------------------------------------------
-#define ENABLED_ENCODERS_COUNT 0     //{"Group":"Rotary Encoders","Name":"ENABLED_ENCODERS_COUNT","Title":"Rotary encoders enabled","DefaultValue":"0","Type":"int","Max":8}
+#define ENABLED_ENCODERS_COUNT 2     //{"Group":"Rotary Encoders","Name":"ENABLED_ENCODERS_COUNT","Title":"Rotary encoders enabled","DefaultValue":"0","Type":"int","Max":8}
 #ifdef  INCLUDE_ENCODERS
 #include "SHRotaryEncoder.h"
 
-#define ENCODER1_CLK_PIN 7           //{"Name":"ENCODER1_CLK_PIN","Title":"Encoder 1 output A (CLK) pin","DefaultValue":"7","Type":"pin;Encoder 1 CLK","Condition":"ENABLED_ENCODERS_COUNT>0"}
-#define ENCODER1_DT_PIN 8            //{"Name":"ENCODER1_DT_PIN","Title":"Encoder 1 output B (DT) pin","DefaultValue":"8","Type":"pin;Encoder 1 DT","Condition":"ENABLED_ENCODERS_COUNT>0"}
-#define ENCODER1_BUTTON_PIN 9        //{"Name":"ENCODER1_BUTTON_PIN","Title":"Encoder 1 button (SW) pin","DefaultValue":"9","Type":"pin;Encoder 1 SWITCH","Condition":"ENABLED_ENCODERS_COUNT>0","Min":-1}
+#define ENCODER1_CLK_PIN 32          //{"Name":"ENCODER1_CLK_PIN","Title":"Encoder 1 output A (CLK) pin","DefaultValue":"7","Type":"pin;Encoder 1 CLK","Condition":"ENABLED_ENCODERS_COUNT>0"}
+#define ENCODER1_DT_PIN 33           //{"Name":"ENCODER1_DT_PIN","Title":"Encoder 1 output B (DT) pin","DefaultValue":"8","Type":"pin;Encoder 1 DT","Condition":"ENABLED_ENCODERS_COUNT>0"}
+#define ENCODER1_BUTTON_PIN 35       //{"Name":"ENCODER1_BUTTON_PIN","Title":"Encoder 1 button (SW) pin","DefaultValue":"9","Type":"pin;Encoder 1 SWITCH","Condition":"ENABLED_ENCODERS_COUNT>0","Min":-1}
 #define ENCODER1_ENABLE_PULLUP 0     //{"Name":"ENCODER1_ENABLE_PULLUP","Title":"Encoder 1 enable pullup resistor","DefaultValue":"0","Type":"bool","Condition":"ENABLED_ENCODERS_COUNT>0"}
 #define ENCODER1_REVERSE_DIRECTION 0 //{"Name":"ENCODER1_REVERSE_DIRECTION","Title":"Encoder 1 reverse direction","DefaultValue":"0","Type":"bool","Condition":"ENABLED_ENCODERS_COUNT>0"}
 #define ENCODER1_ENABLE_HALFSTEPS 0  //{"Name":"ENCODER1_ENABLE_HALFSTEPS","Title":"Encoder 1 steps mode","DefaultValue":"0","Type":"list","Condition":"ENABLED_ENCODERS_COUNT>=1","ListValues":"0,Full steps;1,Half steps"}
 
-#define ENCODER2_CLK_PIN 11          //{"Name":"ENCODER2_CLK_PIN","Title":"Encoder 2 output A (CLK) pin","DefaultValue":"11","Type":"pin;Encoder 2 CLK","Condition":"ENABLED_ENCODERS_COUNT>1"}
-#define ENCODER2_DT_PIN 12           //{"Name":"ENCODER2_DT_PIN","Title":"Encoder 2 output B (DT) pin","DefaultValue":"12","Type":"pin;Encoder 2 DT","Condition":"ENABLED_ENCODERS_COUNT>1"}
-#define ENCODER2_BUTTON_PIN 13       //{"Name":"ENCODER2_BUTTON_PIN","Title":"Encoder 2 button (SW) pin","DefaultValue":"13","Type":"pin;Encoder 2 SWITCH","Condition":"ENABLED_ENCODERS_COUNT>1","Min":-1}
+#define ENCODER2_CLK_PIN 34          //{"Name":"ENCODER2_CLK_PIN","Title":"Encoder 2 output A (CLK) pin","DefaultValue":"11","Type":"pin;Encoder 2 CLK","Condition":"ENABLED_ENCODERS_COUNT>1"}
+#define ENCODER2_DT_PIN 36           //{"Name":"ENCODER2_DT_PIN","Title":"Encoder 2 output B (DT) pin","DefaultValue":"12","Type":"pin;Encoder 2 DT","Condition":"ENABLED_ENCODERS_COUNT>1"}
+#define ENCODER2_BUTTON_PIN 39       //{"Name":"ENCODER2_BUTTON_PIN","Title":"Encoder 2 button (SW) pin","DefaultValue":"13","Type":"pin;Encoder 2 SWITCH","Condition":"ENABLED_ENCODERS_COUNT>1","Min":-1}
 #define ENCODER2_ENABLE_PULLUP 0     //{"Name":"ENCODER2_ENABLE_PULLUP","Title":"Encoder 2 enable pullup resistor","DefaultValue":"0","Type":"bool","Condition":"ENABLED_ENCODERS_COUNT>1"}
 #define ENCODER2_REVERSE_DIRECTION 0 //{"Name":"ENCODER2_REVERSE_DIRECTION","Title":"Encoder 2 reverse direction","DefaultValue":"0","Type":"bool","Condition":"ENABLED_ENCODERS_COUNT>1"}
 #define ENCODER2_ENABLE_HALFSTEPS 0  //{"Name":"ENCODER2_ENABLE_HALFSTEPS","Title":"Encoder 2 steps mode","DefaultValue":"0","Type":"list","Condition":"ENABLED_ENCODERS_COUNT>=2","ListValues":"0,Full steps;1,Half steps"}
@@ -734,25 +778,25 @@ SHRotaryEncoder* SHRotaryEncoders[] = { &encoder1, &encoder2, &encoder3, &encode
 // https://www.dx.com/p/ky-040-rotary-encoder-module-brick-sensor-development-for-arduino-avr-pic-420429#.W9BCM0sza0Q
 // Rotary encoders with pull-up resistors on the 3 outputs
 // ----------------------------------------------------------------------------------------------------------
-#define ENABLED_BUTTONMATRIX 0 //{"Group":"Button matrix","Name":"ENABLED_BUTTONMATRIX","Title":"Button matrix enabled","DefaultValue":"0","Type":"bool"}
+#define ENABLED_BUTTONMATRIX 1 //{"Group":"Button matrix","Name":"ENABLED_BUTTONMATRIX","Title":"Button matrix enabled","DefaultValue":"0","Type":"bool"}
 
-#define BMATRIX_COLS 3         //{"Name":"BMATRIX_COLS","Title":"Columns","DefaultValue":"3","Type":"int","Condition":"ENABLED_BUTTONMATRIX>0","Min":2,"Max":8}
+#define BMATRIX_COLS 4         //{"Name":"BMATRIX_COLS","Title":"Columns","DefaultValue":"3","Type":"int","Condition":"ENABLED_BUTTONMATRIX>0","Min":2,"Max":8}
 #define BMATRIX_ROWS 3         //{"Name":"BMATRIX_ROWS","Title":"Rows","DefaultValue":"3","Type":"int","Condition":"ENABLED_BUTTONMATRIX>0","Min":2,"Max":8}
 
 #ifdef  INCLUDE_BUTTONMATRIX
 #include "SHButtonMatrix.h"
-#define BMATRIX_COL1 17         //{"Name":"BMATRIX_COL1","Title":"Column 1 pin","DefaultValue":"2","Type":"pin;Button M. Col 1","Condition":"ENABLED_BUTTONMATRIX>0 && BMATRIX_COLS>=1"}
-#define BMATRIX_COL2 -1         //{"Name":"BMATRIX_COL2","Title":"Column 2 pin","DefaultValue":"3","Type":"pin;Button M. Col 2","Condition":"ENABLED_BUTTONMATRIX>0 && BMATRIX_COLS>=2"}
-#define BMATRIX_COL3 -1         //{"Name":"BMATRIX_COL3","Title":"Column 3 pin","DefaultValue":"4","Type":"pin;Button M. Col 3","Condition":"ENABLED_BUTTONMATRIX>0 && BMATRIX_COLS>=3"}
-#define BMATRIX_COL4 -1         //{"Name":"BMATRIX_COL4","Title":"Column 4 pin","DefaultValue":"5","Type":"pin;Button M. Col 4","Condition":"ENABLED_BUTTONMATRIX>0 && BMATRIX_COLS>=4"}
+#define BMATRIX_COL1 16         //{"Name":"BMATRIX_COL1","Title":"Column 1 pin","DefaultValue":"2","Type":"pin;Button M. Col 1","Condition":"ENABLED_BUTTONMATRIX>0 && BMATRIX_COLS>=1"}
+#define BMATRIX_COL2 17         //{"Name":"BMATRIX_COL2","Title":"Column 2 pin","DefaultValue":"3","Type":"pin;Button M. Col 2","Condition":"ENABLED_BUTTONMATRIX>0 && BMATRIX_COLS>=2"}
+#define BMATRIX_COL3 18         //{"Name":"BMATRIX_COL3","Title":"Column 3 pin","DefaultValue":"4","Type":"pin;Button M. Col 3","Condition":"ENABLED_BUTTONMATRIX>0 && BMATRIX_COLS>=3"}
+#define BMATRIX_COL4 19         //{"Name":"BMATRIX_COL4","Title":"Column 4 pin","DefaultValue":"5","Type":"pin;Button M. Col 4","Condition":"ENABLED_BUTTONMATRIX>0 && BMATRIX_COLS>=4"}
 #define BMATRIX_COL5 -1         //{"Name":"BMATRIX_COL5","Title":"Column 5 pin","DefaultValue":"2","Type":"pin;Button M. Col 5","Condition":"ENABLED_BUTTONMATRIX>0 && BMATRIX_COLS>=5"}
 #define BMATRIX_COL6 -1         //{"Name":"BMATRIX_COL6","Title":"Column 6 pin","DefaultValue":"2","Type":"pin;Button M. Col 6","Condition":"ENABLED_BUTTONMATRIX>0 && BMATRIX_COLS>=6"}
 #define BMATRIX_COL7 -1         //{"Name":"BMATRIX_COL7","Title":"Column 7 pin","DefaultValue":"2","Type":"pin;Button M. Col 7","Condition":"ENABLED_BUTTONMATRIX>0 && BMATRIX_COLS>=7"}
 #define BMATRIX_COL8 -1         //{"Name":"BMATRIX_COL8","Title":"Column 8 pin","DefaultValue":"2","Type":"pin;Button M. Col 8","Condition":"ENABLED_BUTTONMATRIX>0 && BMATRIX_COLS>=8"}
 
-#define BMATRIX_ROW1 27         //{"Name":"BMATRIX_ROW1","Title":"Row 1 pin","DefaultValue":"6","Type":"pin;Button M. Row 1","Condition":"ENABLED_BUTTONMATRIX>0 && BMATRIX_ROWS>=1"}
-#define BMATRIX_ROW2 -1         //{"Name":"BMATRIX_ROW2","Title":"Row 2 pin","DefaultValue":"7","Type":"pin;Button M. Row 2","Condition":"ENABLED_BUTTONMATRIX>0 && BMATRIX_ROWS>=2"}
-#define BMATRIX_ROW3 -1         //{"Name":"BMATRIX_ROW3","Title":"Row 3 pin","DefaultValue":"8","Type":"pin;Button M. Row 3","Condition":"ENABLED_BUTTONMATRIX>0 && BMATRIX_ROWS>=3"}
+#define BMATRIX_ROW1 25         //{"Name":"BMATRIX_ROW1","Title":"Row 1 pin","DefaultValue":"6","Type":"pin;Button M. Row 1","Condition":"ENABLED_BUTTONMATRIX>0 && BMATRIX_ROWS>=1"}
+#define BMATRIX_ROW2 26         //{"Name":"BMATRIX_ROW2","Title":"Row 2 pin","DefaultValue":"7","Type":"pin;Button M. Row 2","Condition":"ENABLED_BUTTONMATRIX>0 && BMATRIX_ROWS>=2"}
+#define BMATRIX_ROW3 27         //{"Name":"BMATRIX_ROW3","Title":"Row 3 pin","DefaultValue":"8","Type":"pin;Button M. Row 3","Condition":"ENABLED_BUTTONMATRIX>0 && BMATRIX_ROWS>=3"}
 #define BMATRIX_ROW4 -1         //{"Name":"BMATRIX_ROW4","Title":"Row 4 pin","DefaultValue":"9","Type":"pin;Button M. Row 4","Condition":"ENABLED_BUTTONMATRIX>0 && BMATRIX_ROWS>=4"}
 #define BMATRIX_ROW5 -1         //{"Name":"BMATRIX_ROW5","Title":"Row 5 pin","DefaultValue":"2","Type":"pin;Button M. Row 5","Condition":"ENABLED_BUTTONMATRIX>0 && BMATRIX_ROWS>=5"}
 #define BMATRIX_ROW6 -1         //{"Name":"BMATRIX_ROW6","Title":"Row 6 pin","DefaultValue":"2","Type":"pin;Button M. Row 6","Condition":"ENABLED_BUTTONMATRIX>0 && BMATRIX_ROWS>=6"}
@@ -1043,6 +1087,9 @@ SHCustomProtocol shCustomProtocol;
 #include "SHCommandsGlcd.h"
 unsigned long lastMatrixRefresh = 0;
 
+#ifdef  INCLUDE_ENCODERS
+void EncoderPositionChanged(int encoderId, int position, byte direction);
+#endif
 
 #ifdef  INCLUDE_ENCODERS
 void InitEncoders() {
