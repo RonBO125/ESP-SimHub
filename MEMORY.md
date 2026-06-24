@@ -185,3 +185,5 @@ pio run --target clean
 |-------|----------|-------|
 | 2026-06-24 | Projekt initialisiert | Ron |
 | 2026-06-24 | MEMORY.md erstellt | Ron |
+| 2026-06-24 | `.gitignore` erweitert — Python-Cache (`__pycache__/`, `*.pyc`, `*.pyo`) hinzugefügt | Ron |
+| 2026-06-24 | `build_src_filter` vereinfacht — `.git/**`, `__pycache__/`, `*.pyc` entfernt (über `.gitignore` abgedeckt) | Ron |

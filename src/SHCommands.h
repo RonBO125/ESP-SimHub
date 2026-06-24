@@ -321,15 +321,11 @@ void Command_7SegmentsData() {
 }
 
 void Command_RGBLEDSCount() {
-	FlowSerialWrite(
-		(byte)(
-			WS2812B_RGBLEDCOUNT + 
-			PL9823_RGBLEDCOUNT +
-			WS2801_RGBLEDCOUNT
-#ifdef INCLUDE_RGB_LEDS_NEOPIXELBUS
-	+ neoPixelBusCount()
+#if defined(INCLUDE_RGB_LEDS_NEOPIXELBUS)
+	FlowSerialWrite((byte)(WS2812B_RGBLEDCOUNT + PL9823_RGBLEDCOUNT + WS2801_RGBLEDCOUNT + neoPixelBusCount()));
+#else
+	FlowSerialWrite((byte)(WS2812B_RGBLEDCOUNT + PL9823_RGBLEDCOUNT + WS2801_RGBLEDCOUNT));
 #endif
-			));
 	FlowSerialFlush();
 }
 
