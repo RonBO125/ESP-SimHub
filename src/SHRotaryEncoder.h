@@ -105,6 +105,10 @@ public:
 		return button.isValid() && !buttonLastState;
 	}
 
+	int getPosition() {
+		return counter;
+	}
+
 	void read() {
 		if (!halfSteps)
 			inputLastState = fullStepsTable[inputLastState & 0xf][(outputB.digitalRead() << 1) | outputA.digitalRead()];

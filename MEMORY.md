@@ -187,3 +187,4 @@ pio run --target clean
 | 2026-06-24 | MEMORY.md erstellt | Ron |
 | 2026-06-24 | `.gitignore` erweitert — Python-Cache (`__pycache__/`, `*.pyc`, `*.pyo`) hinzugefügt | Ron |
 | 2026-06-24 | `build_src_filter` vereinfacht — `.git/**`, `__pycache__/`, `*.pyc` entfernt (über `.gitignore` abgedeckt) | Ron |
+| 2026-06-24 | PL9823 Test-LEDs: Helligkeit von 100% (255) auf 10% (25) reduziert in [src/SHRGBLedsNeoPixel.h](src/SHRGBLedsNeoPixel.h) | Ron |

@@ -21,7 +21,7 @@ public:
 
 		if (testMode > 0) {
 			for (int i = 0; i < maxLeds; i++) {
-				NeoPixel_strip->setPixelColor(i, 255, 0, 0);
+				NeoPixel_strip->setPixelColor(i, 25, 0, 0);  // 25% Helligkeit (0.1 * 255 = 25)
 				NeoPixel_strip->show();
 			}
 		}

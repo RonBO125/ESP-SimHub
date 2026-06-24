@@ -8,7 +8,7 @@
 #include <Arduino.h>
 // #include <TFT_eSPI.h> // Hardware-specific library
 // #include <SPI.h>
-#include <map>
+#include <string.h>
 
 
 static LGFX tft;
@@ -28,8 +28,23 @@ static const int COL[] = {0, CELL_WIDTH, CELL_WIDTH * 2, CELL_WIDTH * 3, CELL_WI
 static const int ROW[] = {0, CELL_HIGHT, CELL_HIGHT * 2, CELL_HIGHT * 3, CELL_HIGHT * 4, CELL_HIGHT * 6, CELL_HIGHT * 7};
 
 
-std::map<String, String> prevData;
-std::map<String, int32_t> prevColor;
+struct CellState {
+	const char* key;
+	char prevValue[24];
+	int32_t prevColor;
+};
+
+static CellState g_cells[] = {
+	{"bestLapTime",                 "", 0},
+	{"currenLapTime",               "", 0},
+	{"speed",                       "", 0},
+	{"sessionBestLiveDeltaSeconds", "", 0},
+	{"tcTcCut",                     "", 0},
+	{"tcLevel",                     "", 0},
+	{"absLevel",                    "", 0},
+	{"brakeBias",                   "", 0},
+};
+static const int g_cellsCount = sizeof(g_cells) / sizeof(g_cells[0]);
 
 
 class SHCustomProtocol
@@ -41,7 +56,7 @@ private:
 	int rpmRedLineSetting = 90;
 	String gear = "N";
 	String prev_gear;
-	String speed = "0";
+	int speed = 0;
 	String currentLapTime = "00:00.00";
 	String lastLapTime = "00:00.00";
 	String bestLapTime = "00:00.00";
@@ -142,7 +157,7 @@ public:
 
 
 		// Third Column (speed)
-		drawCell(SCREEN_WIDTH, ROW[2], speed, "speed", "Speed","speed",TFT_GREEN);
+		drawCell(SCREEN_WIDTH, ROW[2], String(speed), "speed", "Speed","speed",TFT_GREEN);
 
 		// Fourth+Fifth Column (delta)
 		//drawCell(SCREEN_WIDTH, ROW[1], sessionBestLiveDeltaSeconds, "sessionBestLiveDeltaSeconds", "Delta", "right", sessionBestLiveDeltaSeconds.indexOf('-') >= 0 ? TFT_GREEN : TFT_RED);
@@ -234,72 +249,81 @@ public:
 		prev_rpmPercent = rpmPercent;
 	}
 
-	void drawCell(int32_t x, int32_t y, String data, String id, String name = "Data", String align = "center", int32_t color = TFT_WHITE, int fontSize = 4)
+	void drawCell(int32_t x, int32_t y, const String& data, const char* id, const char* name = "Data", const char* align = "center", int32_t color = TFT_WHITE, int fontSize = 4)
 	{
+		CellState* cell = nullptr;
+		for (int i = 0; i < g_cellsCount; i++) {
+			if (strcmp(g_cells[i].key, id) == 0) {
+				cell = &g_cells[i];
+				break;
+			}
+		}
+		if (!cell) return;
+
 		const static int titleHeight = 27;
 		const static int hPadding = 5;
 		const static int vPadding = 1;
 
 		tft.setTextColor(color, TFT_BLACK);
 
-		const bool dataChanged =  (prevData[id] != data);
-		const bool colorChanged =  (prevColor[id] != color);
+		const bool dataChanged  = (strcmp(cell->prevValue, data.c_str()) != 0);
+		const bool colorChanged = (cell->prevColor != color);
 
 		if (dataChanged) {
 
-			if (align == "left")
+			if (strcmp(align, "left") == 0)
 			{
-				
 				//if (colorChanged) tft.drawRoundRect(x, y, CELL_WIDTH * 2 - 1, CELL_HIGHT - 2, 5, color);		// Rectangle
 				if (colorChanged) tft.drawRoundRect(x, y, CELL_WIDTH * 1.5 - 1, CELL_HIGHT - 2, 5, color);
 				if (colorChanged) tft.drawString(name, x + hPadding, y + vPadding, 2);						// Title
 				tft.drawString(data, x + hPadding, y + titleHeight, fontSize); // Data
 			}
-			else if (align == "right")
+			else if (strcmp(align, "right") == 0)
 			{
 				//if (colorChanged) tft.drawRoundRect(x - (CELL_WIDTH * 2), y, CELL_WIDTH * 2 - 1, CELL_HIGHT - 2, 5, color); // Rectangle
 				if (colorChanged) tft.drawRoundRect(x - (CELL_WIDTH * 1.5), y, CELL_WIDTH * 1.5 - 1, CELL_HIGHT - 2, 5, color);
-				if (colorChanged) tft.drawRightString(name, x - hPadding, y + vPadding, 2);						// Title
+				if (colorChanged) tft.drawRightString(name, x - hPadding, y + vPadding, 2);					// Title
 				tft.drawRightString(data, x - hPadding, y + titleHeight, fontSize);	  // Data
 			}
-			else if (align == "speed")
+			else if (strcmp(align, "speed") == 0)
 			{
 				//if (colorChanged) tft.drawRoundRect(x - (CELL_WIDTH * 2), y, CELL_WIDTH * 2 - 1, CELL_HIGHT - 2, 5, color); // Rectangle
 				if (colorChanged) tft.drawRoundRect(x - (CELL_WIDTH * 1.5), y, CELL_WIDTH * 1.5 - 1, CELL_HIGHT - 2, 5, color);
-				if (colorChanged) tft.drawCentreString(name, x - HALF_CELL_WIDTH - 15, y + vPadding, 2);					// Title
-				tft.drawCentreString(data, x - HALF_CELL_WIDTH - 15, y + titleHeight,fontSize); // Data
-			}			
+				if (colorChanged) tft.drawCentreString(name, x - HALF_CELL_WIDTH - 15, y + vPadding, 2);				// Title
+				tft.drawCentreString(data, x - HALF_CELL_WIDTH - 15, y + titleHeight, fontSize); // Data
+			}
 			else // "center"
 			{
 				if (colorChanged) tft.drawRoundRect(x, y, CELL_WIDTH - 2, CELL_HIGHT - 2, 5, color);	 // Rectangle
-				if (colorChanged) tft.drawCentreString(name, x + HALF_CELL_WIDTH, y + vPadding, 2);			 // Title
+				if (colorChanged) tft.drawCentreString(name, x + HALF_CELL_WIDTH, y + vPadding, 2);		 // Title
 				tft.drawCentreString(data, x + HALF_CELL_WIDTH, y + titleHeight, fontSize); // Data
 			}
 
-			// Clean the previous speed if it was wider
-			if (prevData[id].length() > data.length())
+			// Clear previous value if it was wider
+			if (strlen(cell->prevValue) > data.length())
 			{
 				tft.setTextColor(TFT_BLACK, TFT_BLACK);
-				if (align == "left")
+				if (strcmp(align, "left") == 0)
 				{
-					tft.drawString(prevData[id], x + hPadding, y + titleHeight, fontSize);
+					tft.drawString(cell->prevValue, x + hPadding, y + titleHeight, fontSize);
 				}
-				else if (align == "right")
+				else if (strcmp(align, "right") == 0)
 				{
-					tft.drawRightString(prevData[id], x - hPadding, y + titleHeight, fontSize);
+					tft.drawRightString(cell->prevValue, x - hPadding, y + titleHeight, fontSize);
 				}
-				else if (align == "speed")
+				else if (strcmp(align, "speed") == 0)
 				{
-					tft.drawCentreString(prevData[id], x - HALF_CELL_WIDTH - 15, y + titleHeight, fontSize);
-				}				
+					tft.drawCentreString(cell->prevValue, x - HALF_CELL_WIDTH - 15, y + titleHeight, fontSize);
+				}
 				else
 				{
-					tft.drawCentreString(prevData[id], x + HALF_CELL_WIDTH, y + titleHeight, fontSize);
+					tft.drawCentreString(cell->prevValue, x + HALF_CELL_WIDTH, y + titleHeight, fontSize);
 				}
 			}
 
-			prevData[id] = data;
-			prevColor[id] = color;
+			strncpy(cell->prevValue, data.c_str(), sizeof(cell->prevValue) - 1);
+			cell->prevValue[sizeof(cell->prevValue) - 1] = '\0';
+			cell->prevColor = color;
 		}
 
 	}
