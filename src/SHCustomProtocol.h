@@ -2,332 +2,297 @@
 #define __SHCUSTOMPROTOCOL_H__
 #define LGFX_USE_V1
 #include <LovyanGFX.hpp>
-
-// #include <LGFX_AUTODETECT.hpp>  // クラス"LGFX"を準備します
-#include <lgfx_user/LGFX_ESP32_sample.hpp>
 #include <Arduino.h>
-// #include <TFT_eSPI.h> // Hardware-specific library
-// #include <SPI.h>
 #include <string.h>
+#include "logo.h"
 
+// ── LGFX display config — ESP32-S2, SPI TFT 240×320 ────────────
+// Pins: MOSI=35  SCK=36  CS=34  DC=33  RST=38
+class LGFX : public lgfx::LGFX_Device {
+    lgfx::Panel_ILI9341 _panel;
+    lgfx::Bus_SPI       _bus;
+public:
+    LGFX(void) {
+        {
+            auto cfg        = _bus.config();
+            cfg.spi_host    = SPI2_HOST;
+            cfg.spi_mode    = 0;
+            cfg.freq_write  = 40000000;
+            cfg.freq_read   = 16000000;
+            cfg.spi_3wire   = true;
+            cfg.use_lock    = true;
+            cfg.dma_channel = SPI_DMA_CH_AUTO;
+            cfg.pin_sclk    = 36;
+            cfg.pin_mosi    = 35;
+            cfg.pin_miso    = -1;
+            cfg.pin_dc      = 33;
+            _bus.config(cfg);
+            _panel.setBus(&_bus);
+        }
+        {
+            auto cfg             = _panel.config();
+            cfg.pin_cs           = 34;
+            cfg.pin_rst          = 38;
+            cfg.pin_busy         = -1;
+            cfg.panel_width      = 240;
+            cfg.panel_height     = 320;
+            cfg.readable         = false;
+            cfg.invert           = false;
+            cfg.rgb_order        = false;
+            cfg.dlen_16bit       = false;
+            cfg.bus_shared       = false;
+            _panel.config(cfg);
+        }
+        setPanel(&_panel);
+    }
+};
 
 static LGFX tft;
 
+// ── Display size (portrait 240×320) ─────────────────────────────
+static const int W = 240;
+static const int H = 320;
 
-static const int SCREEN_WIDTH = 240;
-static const int SCREEN_HEIGHT = 320;
-static const int X_CENTER = SCREEN_WIDTH / 2;
-static const int Y_CENTER = SCREEN_HEIGHT / 2;
-static const int ROWS = 5;
-static const int COLS = 3;
-static const int CELL_WIDTH = SCREEN_WIDTH / COLS;
-static const int HALF_CELL_WIDTH = CELL_WIDTH / 2;
-static const int CELL_HIGHT = SCREEN_HEIGHT / ROWS;
-static const int HALF_CELL_HIGHT = CELL_HIGHT / 2;
-static const int COL[] = {0, CELL_WIDTH, CELL_WIDTH * 2, CELL_WIDTH * 3, CELL_WIDTH * 4, CELL_WIDTH * 6, CELL_WIDTH * 7};
-static const int ROW[] = {0, CELL_HIGHT, CELL_HIGHT * 2, CELL_HIGHT * 3, CELL_HIGHT * 4, CELL_HIGHT * 6, CELL_HIGHT * 7};
+// ── Section layout ───────────────────────────────────────────────
+//  Y    H    content
+//   0   18   RPM bar
+//  19  100   Gear (left half) | Speed (right half)
+// 120   50   Current lap time
+// 171   50   Best lap time
+// 222   48   Delta
+// 271   49   TC | ABS | BB
+static const int RPM_Y  = 0,   RPM_H  = 18;
+static const int MAIN_Y = 19,  MAIN_H = 100;
+static const int CLAP_Y = 120, CLAP_H = 50;
+static const int BLAP_Y = 171, BLAP_H = 50;
+static const int DELT_Y = 222, DELT_H = 48;
+static const int ASST_Y = 271, ASST_H = 49;
+
+// ── Color palette ────────────────────────────────────────────────
+static const uint32_t C_BG    = TFT_BLACK;
+static const uint32_t C_DIV   = 0x2945;  // dark gray — dividers
+static const uint32_t C_LABEL = 0x8410;  // mid gray  — labels
+static const uint32_t C_GOLD  = 0xFEA0;  // #FFD700   — logo
+
+// ── Per-field dirty tracking ─────────────────────────────────────
+struct Field { char prev[32]; int32_t prevColor; };
+
+static Field fGear  = {"*", 0};
+static Field fSpd   = {"*", 0};
+static Field fCLap  = {"*", 0};
+static Field fBLap  = {"*", 0};
+static Field fDelt  = {"*", 0};
+static Field fTC    = {"*", 0};
+static Field fABS   = {"*", 0};
+static Field fBB    = {"*", 0};
+
+static bool fieldChanged(Field& f, const String& v, int32_t c) {
+    if (strcmp(f.prev, v.c_str()) == 0 && f.prevColor == c) return false;
+    strncpy(f.prev, v.c_str(), 31);
+    f.prev[31] = '\0';
+    f.prevColor = c;
+    return true;
+}
 
 
-struct CellState {
-	const char* key;
-	char prevValue[24];
-	int32_t prevColor;
-};
-
-static CellState g_cells[] = {
-	{"bestLapTime",                 "", 0},
-	{"currenLapTime",               "", 0},
-	{"speed",                       "", 0},
-	{"sessionBestLiveDeltaSeconds", "", 0},
-	{"tcTcCut",                     "", 0},
-	{"tcLevel",                     "", 0},
-	{"absLevel",                    "", 0},
-	{"brakeBias",                   "", 0},
-};
-static const int g_cellsCount = sizeof(g_cells) / sizeof(g_cells[0]);
-
-
-class SHCustomProtocol
-{
+class SHCustomProtocol {
 private:
-	// Global variables
-	int rpmPercent = 50;
-	int prev_rpmPercent = 50;
-	int rpmRedLineSetting = 90;
-	String gear = "N";
-	String prev_gear;
-	int speed = 0;
-	String currentLapTime = "00:00.00";
-	String lastLapTime = "00:00.00";
-	String bestLapTime = "00:00.00";
-	String sessionBestLiveDeltaSeconds = "0.000";
-	String sessionBestLiveDeltaProgressSeconds = "0.00";
-	String tyrePressureFrontLeft = "00.0";
-	String tyrePressureFrontRight = "00.0";
-	String tyrePressureRearLeft = "00.0";
-	String tyrePressureRearRight = "00.0";
-	String tcLevel = "0";
-	String tcActive = "0";
-	String absLevel = "0";
-	String absActive = "0";
-	String isTCCutNull = "True";
-	String tcTcCut = "0  0";
-	String brakeBias = "0";
-	String brake = "0";
-	String lapInvalidated = "False";
-	
-	
+    // ── Telemetry data ───────────────────────────────────────────
+    int    rpmPct    = 0;
+    int    prevRpm   = -1;
+    int    rpmRL     = 90;
+    String gear      = "N";
+    int    speed     = 0;
+    String curLap    = "--:--.--";
+    String bestLap   = "--:--.--";
+    String delta     = "---.---";
+    String tcLvl     = "0";
+    String tcAct     = "0";
+    String absLvl    = "0";
+    String absAct    = "0";
+    String tcCutNull = "True";
+    String tcCut     = "0  0";
+    String bb        = "0";
+    String lapInv    = "False";
+
+    // ── Screen state ─────────────────────────────────────────────
+    enum class Mode : uint8_t { LOGO, DASH };
+    Mode          _mode       = Mode::LOGO;
+    unsigned long _lastDataMs = 0;
+
+    // ── Logo screen ──────────────────────────────────────────────
+    void drawLogo() {
+        tft.fillScreen(C_BG);
+        int x = (W - LOGO_W) / 2;
+        int y = (H - LOGO_H) / 2;
+        tft.drawBitmap(x, y, LOGO_BITMAP, LOGO_W, LOGO_H, C_GOLD, C_BG);
+    }
+
+    // ── Dashboard chrome — drawn once when entering dash mode ────
+    void drawChrome() {
+        // Horizontal dividers
+        tft.drawFastHLine(0, RPM_Y + RPM_H, W, C_DIV);
+        tft.drawFastHLine(0, CLAP_Y - 1,    W, C_DIV);
+        tft.drawFastHLine(0, BLAP_Y - 1,    W, C_DIV);
+        tft.drawFastHLine(0, DELT_Y - 1,    W, C_DIV);
+        tft.drawFastHLine(0, ASST_Y - 1,    W, C_DIV);
+
+        // Vertical dividers
+        tft.drawFastVLine(W / 2,     MAIN_Y, MAIN_H, C_DIV);
+        tft.drawFastVLine(W / 3,     ASST_Y, ASST_H, C_DIV);
+        tft.drawFastVLine(W * 2 / 3, ASST_Y, ASST_H, C_DIV);
+
+        // Section labels
+        tft.setTextColor(C_LABEL, C_BG);
+        tft.drawString     ("CUR LAP",  4,       CLAP_Y + 3, 2);
+        tft.drawString     ("BEST LAP", 4,       BLAP_Y + 3, 2);
+        tft.drawCentreString("DELTA",   W / 2,   DELT_Y + 3, 2);
+        tft.drawCentreString("TC",      W / 6,   ASST_Y + 5, 2);
+        tft.drawCentreString("ABS",     W / 2,   ASST_Y + 5, 2);
+        tft.drawCentreString("BB",      W * 5/6, ASST_Y + 5, 2);
+    }
+
+    // ── Mode transitions ─────────────────────────────────────────
+    void enterDash() {
+        _mode = Mode::DASH;
+        tft.fillScreen(C_BG);
+        drawChrome();
+        prevRpm = -1;
+        auto rst = [](Field& f) { strcpy(f.prev, "*"); f.prevColor = 0; };
+        rst(fGear); rst(fSpd); rst(fCLap); rst(fBLap);
+        rst(fDelt); rst(fTC);  rst(fABS);  rst(fBB);
+    }
+
+    // ── RPM bar ──────────────────────────────────────────────────
+    void drawRpm() {
+        if (rpmPct == prevRpm) return;
+        int bw  = max(0, min(W, (W * rpmPct) / 100));
+        int bh  = RPM_H - 4;
+        uint32_t col = (rpmPct >= rpmRL)      ? TFT_RED    :
+                       (rpmPct >= rpmRL - 5)  ? TFT_ORANGE : 0x07E0;
+        if (prevRpm > rpmPct)
+            tft.fillRect(bw, 2, W - bw, bh, C_BG);
+        if (bw > 0)
+            tft.fillRect(0, 2, bw, bh, col);
+        if (prevRpm < 0)
+            tft.drawRect(0, 0, W, RPM_H, C_DIV);
+        prevRpm = rpmPct;
+    }
+
+    // ── Gear ─────────────────────────────────────────────────────
+    void drawGear() {
+        if (!fieldChanged(fGear, gear, TFT_YELLOW)) return;
+        tft.fillRect(1, MAIN_Y + 1, W / 2 - 2, MAIN_H - 2, C_BG);
+        tft.setTextSize(3);
+        tft.setTextColor(TFT_YELLOW, C_BG);
+        tft.drawCentreString(gear, W / 4, MAIN_Y + 12, 4);
+        tft.setTextSize(1);
+        tft.drawFastVLine(W / 2, MAIN_Y, MAIN_H, C_DIV);
+    }
+
+    // ── Speed ────────────────────────────────────────────────────
+    void drawSpeed() {
+        String s = String(speed);
+        if (!fieldChanged(fSpd, s, TFT_GREEN)) return;
+        tft.fillRect(W / 2 + 1, MAIN_Y + 1, W / 2 - 2, MAIN_H - 22, C_BG);
+        tft.setTextColor(TFT_GREEN, C_BG);
+        tft.drawCentreString(s, W * 3 / 4, MAIN_Y + 16, 6);
+        tft.setTextColor(C_LABEL, C_BG);
+        tft.drawCentreString("km/h", W * 3 / 4, MAIN_Y + MAIN_H - 18, 2);
+    }
+
+    // ── Lap time ─────────────────────────────────────────────────
+    void drawLap(Field& f, const String& val, int y, int h, int32_t color) {
+        if (!fieldChanged(f, val, color)) return;
+        tft.fillRect(0, y + 21, W, h - 22, C_BG);
+        tft.setTextColor(color, C_BG);
+        tft.drawRightString(val, W - 6, y + 22, 4);
+    }
+
+    // ── Delta ────────────────────────────────────────────────────
+    void drawDelta() {
+        int32_t col = (delta.indexOf('-') >= 0) ? TFT_GREEN : TFT_RED;
+        if (!fieldChanged(fDelt, delta, col)) return;
+        tft.fillRect(0, DELT_Y + 21, W, DELT_H - 22, C_BG);
+        tft.setTextColor(col, C_BG);
+        tft.drawCentreString(delta, W / 2, DELT_Y + 21, 4);
+    }
+
+    // ── TC / ABS / BB ────────────────────────────────────────────
+    void drawAssist(Field& f, const String& val, int32_t col, int column) {
+        if (!fieldChanged(f, val, col)) return;
+        int x0 = (column - 1) * (W / 3) + 1;
+        int cx = (column - 1) * (W / 3) + W / 6;
+        tft.fillRect(x0, ASST_Y + 22, W / 3 - 2, ASST_H - 23, C_BG);
+        tft.setTextColor(col, C_BG);
+        tft.drawCentreString(val, cx, ASST_Y + 22, 4);
+    }
 
 public:
-	/*
-	CUSTOM PROTOCOL CLASS
-	SEE https://github.com/zegreatclan/SimHub/wiki/Custom-Arduino-hardware-support
+    void setup() {
+        tft.init();
+        tft.setRotation(0);
+        drawLogo(); // show logo before SimHub connects
+    }
 
-	GENERAL RULES :
-		- ALWAYS BACKUP THIS FILE, reinstalling/updating SimHub would overwrite it with the default version.
-		- Read data AS FAST AS POSSIBLE in the read function
-		- NEVER block the arduino (using delay for instance)
-		- Make sure the data read in "read()" function READS ALL THE DATA from the serial port matching the custom protocol definition
-		- Idle function is called hundreds of times per second, never use it for slow code, arduino performances would fall
-		- If you use library suspending interrupts make sure to use it only in the "read" function when ALL data has been read from the serial port.
-			It is the only interrupt safe place
+    void read() {
+        speed      = FlowSerialReadStringUntil(';').toInt();
+        gear       = FlowSerialReadStringUntil(';');
+        rpmPct     = FlowSerialReadStringUntil(';').toInt();
+        rpmRL      = FlowSerialReadStringUntil(';').toInt();
+        curLap     = FlowSerialReadStringUntil(';');
+        FlowSerialReadStringUntil(';'); // lastLap (unused)
+        bestLap    = FlowSerialReadStringUntil(';');
+        delta      = FlowSerialReadStringUntil(';');
+        FlowSerialReadStringUntil(';'); // deltaProgress
+        FlowSerialReadStringUntil(';'); // tyrePressFL
+        FlowSerialReadStringUntil(';'); // tyrePressFF
+        FlowSerialReadStringUntil(';'); // tyrePressRL
+        FlowSerialReadStringUntil(';'); // tyrePressRR
+        tcLvl      = FlowSerialReadStringUntil(';');
+        tcAct      = FlowSerialReadStringUntil(';');
+        absLvl     = FlowSerialReadStringUntil(';');
+        absAct     = FlowSerialReadStringUntil(';');
+        tcCutNull  = FlowSerialReadStringUntil(';');
+        tcCut      = FlowSerialReadStringUntil(';');
+        bb         = FlowSerialReadStringUntil(';');
+        FlowSerialReadStringUntil(';'); // brake (unused)
+        lapInv     = FlowSerialReadStringUntil(';');
+        FlowSerialReadStringUntil('\n');
 
-	COMMON FUNCTIONS :
-		- FlowSerialReadStringUntil('\n')
-			Read the incoming data up to the end (\n) won't be included
-		- FlowSerialReadStringUntil(';')
-			Read the incoming data up to the separator (;) separator won't be included
-		- FlowSerialDebugPrintLn(string)
-			Send a debug message to simhub which will display in the log panel and log file (only use it when debugging, it would slow down arduino in run conditions)
+        _lastDataMs = millis();
+        if (_mode != Mode::DASH) enterDash(); // switch from logo to dashboard
+    }
 
-	*/
+    void loop() {
+        // After 5 minutes without data → back to logo
+        if (_mode == Mode::DASH && (millis() - _lastDataMs > 300000UL)) {
+            _mode = Mode::LOGO;
+            drawLogo();
+            return;
+        }
+        if (_mode != Mode::DASH) return;
 
-	// Called when starting the arduino (setup method in main sketch)
-	void setup()
-	{
-		tft.init();
-		tft.setRotation(0);
-		tft.fillScreen(TFT_BLACK);
-	}
+        drawRpm();
+        drawGear();
+        drawSpeed();
 
-	// Called when new data is coming from computer
-	void read()
-	{
-		String full = "";
+        int32_t lapCol = (lapInv == "True") ? TFT_RED : TFT_WHITE;
+        drawLap(fCLap, curLap,  CLAP_Y, CLAP_H, lapCol);
+        drawLap(fBLap, bestLap, BLAP_Y, BLAP_H, TFT_CYAN);
 
-		speed = FlowSerialReadStringUntil(';').toInt();
-		gear = FlowSerialReadStringUntil(';');
-		rpmPercent = FlowSerialReadStringUntil(';').toInt();
-		rpmRedLineSetting = FlowSerialReadStringUntil(';').toInt();
-		currentLapTime = FlowSerialReadStringUntil(';');
-		lastLapTime = FlowSerialReadStringUntil(';');
-		bestLapTime = FlowSerialReadStringUntil(';');
-		sessionBestLiveDeltaSeconds = FlowSerialReadStringUntil(';');
-		sessionBestLiveDeltaProgressSeconds = FlowSerialReadStringUntil(';');
-		tyrePressureFrontLeft  = FlowSerialReadStringUntil(';');
-		tyrePressureFrontRight  = FlowSerialReadStringUntil(';');
-		tyrePressureRearLeft  = FlowSerialReadStringUntil(';');
-		tyrePressureRearRight  = FlowSerialReadStringUntil(';');
-		tcLevel  = FlowSerialReadStringUntil(';');
-		tcActive  = FlowSerialReadStringUntil(';');
-		absLevel  = FlowSerialReadStringUntil(';');
-		absActive  = FlowSerialReadStringUntil(';');
-		isTCCutNull  = FlowSerialReadStringUntil(';');
-		tcTcCut  = FlowSerialReadStringUntil(';');
-		brakeBias  = FlowSerialReadStringUntil(';');
-		brake  = FlowSerialReadStringUntil(';');
-		lapInvalidated  = FlowSerialReadStringUntil(';');
+        drawDelta();
 
-		const String rest = FlowSerialReadStringUntil('\n');
-	}
+        String  tcStr  = (tcCutNull == "False") ? tcCut : tcLvl;
+        int32_t tcCol  = (tcAct  == "1") ? TFT_YELLOW : 0xC600;
+        int32_t absCol = (absAct == "1") ? 0x001F     : 0x0018;
 
-	// Called once per arduino loop, timing can't be predicted,
-	// but it's called between each command sent to the arduino
-	void loop()
-	{
-		//drawRpmMeter(0, 0, SCREEN_WIDTH, HALF_CELL_HIGHT);
-		//drawGear(COL[2], COL[1]);
-		drawGear(COL[1], COL[0]);
-		
-		// First+Second Column (Lap times)
-		//drawCell(COL[0], ROW[1], bestLapTime, "bestLapTime", "Best Lap", "left");
-		drawCell(COL[0], ROW[3], bestLapTime, "bestLapTime", "Best Lap", "left");
-		//drawCell(COL[0], ROW[2], lastLapTime, "lastLapTime", "Last Lap", "left");
-		drawCell(COL[0], ROW[2], currentLapTime, "currenLapTime", "Current Lap", "left", lapInvalidated == "True" ? TFT_RED : TFT_WHITE);
+        drawAssist(fTC,  tcStr,  tcCol,       1);
+        drawAssist(fABS, absLvl, absCol,      2);
+        drawAssist(fBB,  bb,     TFT_MAGENTA, 3);
+    }
 
-
-		// Third Column (speed)
-		drawCell(SCREEN_WIDTH, ROW[2], String(speed), "speed", "Speed","speed",TFT_GREEN);
-
-		// Fourth+Fifth Column (delta)
-		//drawCell(SCREEN_WIDTH, ROW[1], sessionBestLiveDeltaSeconds, "sessionBestLiveDeltaSeconds", "Delta", "right", sessionBestLiveDeltaSeconds.indexOf('-') >= 0 ? TFT_GREEN : TFT_RED);
-		drawCell(SCREEN_WIDTH, ROW[3], sessionBestLiveDeltaSeconds, "sessionBestLiveDeltaSeconds", "Delta", "right", sessionBestLiveDeltaSeconds.indexOf('-') >= 0 ? TFT_GREEN : TFT_RED);		
-		//drawCell(SCREEN_WIDTH, ROW[2], sessionBestLiveDeltaProgressSeconds, "sessionBestLiveDeltaProgressSeconds", "Delta P", "right", sessionBestLiveDeltaProgressSeconds.indexOf('-') >= 0 ? TFT_GREEN : TFT_RED);
-		
-
-		// (TC, ABS, BB)
-		if (isTCCutNull == "False")
-			drawCell(COL[0], ROW[4], tcTcCut, "tcTcCut", "TC TC2", "center", TFT_YELLOW);
-		else
-			drawCell(COL[0], ROW[4], tcLevel, "tcLevel", "TC", "center", TFT_YELLOW);
-		drawCell(COL[1], ROW[4], absLevel, "absLevel", "ABS", "center", TFT_BLUE);
-		drawCell(COL[2], ROW[4], brakeBias, "brakeBias", "BB", "center", TFT_MAGENTA);
-
-		// (tyre pressure)
-		// drawCell(COL[3], ROW[3], tyrePressureFrontLeft, "tyrePressureFrontLeft", "FL", "center", TFT_CYAN);
-		// drawCell(COL[4], ROW[3], tyrePressureFrontRight, "tyrePressureFrontRight", "FR", "center", TFT_CYAN);
-		// drawCell(COL[3], ROW[4], tyrePressureRearLeft, "tyrePressureRearLeft", "RL", "center", TFT_CYAN);
-		// drawCell(COL[4], ROW[4], tyrePressureRearRight, "tyrePressureRearRight", "RR", "center", TFT_CYAN);
-	}
-
-	// Called once between each byte read on arduino,
-	// THIS IS A CRITICAL PATH :
-	// AVOID ANY TIME CONSUMING ROUTINES !!!
-	// PREFER READ OR LOOP METHOS AS MUCH AS POSSIBLE
-	// AVOID ANY INTERRUPTS DISABLE (serial data would be lost!!!)
-	void idle()
-	{
-	}
-
-	void drawGear(int32_t x, int32_t y)
-	{
-		// draw gear only when it changes
-		if (gear != prev_gear)
-		{
-			// tft.loadFont("Formula1_Regular_web_072pt7b", SPIFFS);
-			tft.setTextColor(TFT_YELLOW, TFT_BLACK);
-			tft.setTextSize(14);
-			tft.setTextDatum(MC_DATUM);
-			//tft.setCursor(x + 12, y + HALF_CELL_HIGHT);
-			tft.setCursor(x, y + CELL_HIGHT);
-			tft.print(gear);
-			tft.setTextSize(1);
-			tft.setTextDatum(TL_DATUM);
-
-			prev_gear = gear;
-		}
-	}
-
-	boolean isDrawGearRpmRedRec()
-	{
-		if (rpmPercent >= rpmRedLineSetting)
-		{
-			return true;
-		}
-		return false;
-	}
-
-	void drawRpmMeter(int32_t x, int32_t y, int width, int height)
-	{
-		int meterWidth = (width * rpmPercent) / 100;
-
-		int yPlusOne = y + 1;
-		int innerWidth = width - meterWidth - 1;
-		int innerHeight = height - 4;
-
-		if (prev_rpmPercent > rpmPercent)
-		{
-			tft.fillRect(meterWidth, yPlusOne, innerWidth, innerHeight, TFT_BLACK); // clear the part after the current rect width
-		}
-
-		if (rpmPercent >= rpmRedLineSetting)
-		{
-			tft.fillRect(x, yPlusOne, meterWidth - 2, innerHeight, TFT_RED);
-		}
-		else if (rpmPercent >= rpmRedLineSetting - 5)
-		{
-			tft.fillRect(x, yPlusOne, meterWidth - 2, innerHeight, TFT_ORANGE);
-		}
-		else
-		{
-			tft.fillRect(x, yPlusOne, meterWidth - 2, innerHeight, TFT_GREEN);
-		}
-
-		// draw the frame only if it ont there
-		if (prev_rpmPercent == 50) tft.drawRect(x, y, width, height-2, TFT_WHITE);
-		
-		prev_rpmPercent = rpmPercent;
-	}
-
-	void drawCell(int32_t x, int32_t y, const String& data, const char* id, const char* name = "Data", const char* align = "center", int32_t color = TFT_WHITE, int fontSize = 4)
-	{
-		CellState* cell = nullptr;
-		for (int i = 0; i < g_cellsCount; i++) {
-			if (strcmp(g_cells[i].key, id) == 0) {
-				cell = &g_cells[i];
-				break;
-			}
-		}
-		if (!cell) return;
-
-		const static int titleHeight = 27;
-		const static int hPadding = 5;
-		const static int vPadding = 1;
-
-		tft.setTextColor(color, TFT_BLACK);
-
-		const bool dataChanged  = (strcmp(cell->prevValue, data.c_str()) != 0);
-		const bool colorChanged = (cell->prevColor != color);
-
-		if (dataChanged) {
-
-			if (strcmp(align, "left") == 0)
-			{
-				//if (colorChanged) tft.drawRoundRect(x, y, CELL_WIDTH * 2 - 1, CELL_HIGHT - 2, 5, color);		// Rectangle
-				if (colorChanged) tft.drawRoundRect(x, y, CELL_WIDTH * 1.5 - 1, CELL_HIGHT - 2, 5, color);
-				if (colorChanged) tft.drawString(name, x + hPadding, y + vPadding, 2);						// Title
-				tft.drawString(data, x + hPadding, y + titleHeight, fontSize); // Data
-			}
-			else if (strcmp(align, "right") == 0)
-			{
-				//if (colorChanged) tft.drawRoundRect(x - (CELL_WIDTH * 2), y, CELL_WIDTH * 2 - 1, CELL_HIGHT - 2, 5, color); // Rectangle
-				if (colorChanged) tft.drawRoundRect(x - (CELL_WIDTH * 1.5), y, CELL_WIDTH * 1.5 - 1, CELL_HIGHT - 2, 5, color);
-				if (colorChanged) tft.drawRightString(name, x - hPadding, y + vPadding, 2);					// Title
-				tft.drawRightString(data, x - hPadding, y + titleHeight, fontSize);	  // Data
-			}
-			else if (strcmp(align, "speed") == 0)
-			{
-				//if (colorChanged) tft.drawRoundRect(x - (CELL_WIDTH * 2), y, CELL_WIDTH * 2 - 1, CELL_HIGHT - 2, 5, color); // Rectangle
-				if (colorChanged) tft.drawRoundRect(x - (CELL_WIDTH * 1.5), y, CELL_WIDTH * 1.5 - 1, CELL_HIGHT - 2, 5, color);
-				if (colorChanged) tft.drawCentreString(name, x - HALF_CELL_WIDTH - 15, y + vPadding, 2);				// Title
-				tft.drawCentreString(data, x - HALF_CELL_WIDTH - 15, y + titleHeight, fontSize); // Data
-			}
-			else // "center"
-			{
-				if (colorChanged) tft.drawRoundRect(x, y, CELL_WIDTH - 2, CELL_HIGHT - 2, 5, color);	 // Rectangle
-				if (colorChanged) tft.drawCentreString(name, x + HALF_CELL_WIDTH, y + vPadding, 2);		 // Title
-				tft.drawCentreString(data, x + HALF_CELL_WIDTH, y + titleHeight, fontSize); // Data
-			}
-
-			// Clear previous value if it was wider
-			if (strlen(cell->prevValue) > data.length())
-			{
-				tft.setTextColor(TFT_BLACK, TFT_BLACK);
-				if (strcmp(align, "left") == 0)
-				{
-					tft.drawString(cell->prevValue, x + hPadding, y + titleHeight, fontSize);
-				}
-				else if (strcmp(align, "right") == 0)
-				{
-					tft.drawRightString(cell->prevValue, x - hPadding, y + titleHeight, fontSize);
-				}
-				else if (strcmp(align, "speed") == 0)
-				{
-					tft.drawCentreString(cell->prevValue, x - HALF_CELL_WIDTH - 15, y + titleHeight, fontSize);
-				}
-				else
-				{
-					tft.drawCentreString(cell->prevValue, x + HALF_CELL_WIDTH, y + titleHeight, fontSize);
-				}
-			}
-
-			strncpy(cell->prevValue, data.c_str(), sizeof(cell->prevValue) - 1);
-			cell->prevValue[sizeof(cell->prevValue) - 1] = '\0';
-			cell->prevColor = color;
-		}
-
-	}
-
+    void idle() {}
 };
 
 #endif

@@ -179,6 +179,46 @@ pio run --target clean
 - Shake-It Module erfordern separate Stromversorgung für Motoren
 - I2C-Geschwindigkeit standardmäßig 100kHz (kann erhöht werden)
 
+## TFT-Display (SHCustomProtocol.h)
+
+Das Display wird vollständig über `src/SHCustomProtocol.h` gesteuert — kein SimHub-OLED-Dashboard.
+SimHub sendet Telemetrie via Custom Protocol (serielle Pipe), der ESP rendert selbst.
+
+### Wichtiger Fix: VSPI_HOST auf ESP32-S2 nicht verfügbar
+`VSPI_HOST` existiert im ESP32-S2 SDK nicht → Compile-Fehler.
+**Lösung:** LGFX-Klasse direkt in `SHCustomProtocol.h` eingebettet mit `SPI2_HOST`.
+Die LovyanGFX-Sampledatei `lgfx_user/LGFX_ESP32_sample.hpp` **niemals einbinden** — sie enthält `VSPI_HOST`.
+
+### Display-Layout (Portrait 240×320)
+
+| Y | H | Inhalt |
+|---|---|---|
+| 0 | 18 | RPM-Balken (grün→orange→rot) |
+| 19 | 100 | Gang links (gelb, Font 4 ×3) \| Speed rechts (grün, Font 6) |
+| 120 | 50 | Aktuelle Rundenzeit (weiß / rot bei ungültig) |
+| 171 | 50 | Beste Rundenzeit (cyan) |
+| 222 | 48 | Delta (grün wenn negativ, rot wenn positiv) |
+| 271 | 49 | TC \| ABS \| BB (bright wenn aktiv) |
+
+### Bildschirmmodi
+- **LOGO-Modus:** Lamborghini-Logo (gold `C_GOLD=0xFEA0` auf schwarz) — beim Start und nach 5 Min. ohne Daten
+- **DASH-Modus:** vollständiges Dashboard — sobald erstes SimHub-Paket eintrifft
+- Timeout-Konstante: `300000UL` ms in `loop()`
+
+### Logo-Bitmap
+- Datei: `src/logo.h` — 1bpp PROGMEM-Array, MSB-first, Zeilenauffüllung auf Bytegrenze
+- Aktuell: Platzhalter (alle Null → leerer Bildschirm)
+- Generieren: `python tools/convert_logo.py <bild.png>` (benötigt `pip install Pillow`)
+- Zielgröße: 200×210 px (zentriert auf 240×320)
+
+### Farben (RGB565)
+| Konstante | Wert | Farbe |
+|---|---|---|
+| C_BG | TFT_BLACK | Hintergrund |
+| C_DIV | 0x2945 | Trennlinien (dunkelgrau) |
+| C_LABEL | 0x8410 | Beschriftungen (mittelgrau) |
+| C_GOLD | 0xFEA0 | Logo-Gold (#FFD700) |
+
 ## Änderungsprotokoll
 
 | Datum | Änderung | Autor |
@@ -188,3 +228,5 @@ pio run --target clean
 | 2026-06-24 | `.gitignore` erweitert — Python-Cache (`__pycache__/`, `*.pyc`, `*.pyo`) hinzugefügt | Ron |
 | 2026-06-24 | `build_src_filter` vereinfacht — `.git/**`, `__pycache__/`, `*.pyc` entfernt (über `.gitignore` abgedeckt) | Ron |
 | 2026-06-24 | PL9823 Test-LEDs: Helligkeit von 100% (255) auf 10% (25) reduziert in [src/SHRGBLedsNeoPixel.h](src/SHRGBLedsNeoPixel.h) | Ron |
+| 2026-06-25 | `SHCustomProtocol.h` komplett überarbeitet — neues Layout mit RPM-Balken, Dirty-Tracking, LGFX inline mit SPI2_HOST | Claude |
+| 2026-06-25 | `src/logo.h` + `tools/convert_logo.py` hinzugefügt — Lamborghini-Logo (gold/schwarz), Platzhalter, 5-Min-Timeout | Claude |

@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(grep -E \"^./[^/]+/[^/]+$\")",
-      "Bash(awk '{print $9}')"
+      "Bash(awk '{print $9}')",
+      "Bash(pio run *)",
+      "Bash(if [ -f \"c:/Users/Ron/.claude/projects/c--Users-Ron-OneDrive-3D-Druck-SimRacing-Turn-R8-LMS-DIY-Files-TechEddy-ESP-SimHub-GT-Wheel---Test-ESP-SimHub-main/memory/MEMORY.md\" ]; then cat \"c:/Users/Ron/.claude/projects/c--Users-Ron-OneDrive-3D-Druck-SimRacing-Turn-R8-LMS-DIY-Files-TechEddy-ESP-SimHub-GT-Wheel---Test-ESP-SimHub-main/memory/MEMORY.md\"; else echo \"NOT FOUND\"; fi)",
+      "Read(//c/Users/Ron/.claude/projects/c--Users-Ron-OneDrive-3D-Druck-SimRacing-Turn-R8-LMS-DIY-Files-TechEddy-ESP-SimHub-GT-Wheel---Test-ESP-SimHub-main/memory/**)"
     ]
   }
 }
