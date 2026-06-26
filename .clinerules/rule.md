@@ -76,7 +76,7 @@ src/
   SHRotaryEncoder.h     — EC11-Drehgeber-Zustandsmaschine
   SHButton.h            — Einzeltaster-Handler
   SHCommands.h          — SimHub-Befehlsverarbeitung
-  lgfx_user/            — LovyanGFX Display-Konfiguration (ST7735)
+  logo.h                — 1bpp PROGMEM-Bitmap Lamborghini-Logo (240×320)
 lib/
   ECrowneJoystick/      — USB-HID-Gamepad-Implementierung
   EspSimHub/            — SimHub-Kernbibliothek
@@ -150,12 +150,18 @@ aktivieren. Keine direkte Initialisierung außerhalb von `setup()`.
 Das Display wird vollständig über `src/SHCustomProtocol.h` gesteuert — kein SimHub-OLED-Dashboard.
 SimHub sendet Telemetrie via Custom Protocol (serielle Pipe), der ESP rendert selbst.
 
-### Wichtiger Fix: VSPI_HOST auf ESP32-S2 nicht verfügbar
-`VSPI_HOST` existiert im ESP32-S2 SDK nicht → Compile-Fehler.
-**Lösung:** LGFX-Klasse direkt in `SHCustomProtocol.h` eingebettet mit `SPI2_HOST`.
-Die LovyanGFX-Sampledatei `lgfx_user/LGFX_ESP32_sample.hpp` **niemals einbinden** — sie enthält `VSPI_HOST`.
+### Display-Hardware (KRITISCH — nicht ändern)
 
-### Display-Layout (Portrait 240×320)
+- **Controller:** ST7789 → `lgfx::Panel_ST7789` verwenden. **Niemals Panel_ILI9341** (falscher Chip → Bild versetzt)
+- **panel_width=240, panel_height=320** — IC-native Dimensionen (nicht die PCB-Maße 320×240)
+- **`tft.setRotation(0)`** — vom Benutzer physisch getestet und festgelegt. **Niemals ändern.**
+- **cfg.invert=true, cfg.rgb_order=false** — für korrekte Farben auf diesem Modul
+- LGFX-Klasse ist direkt in `SHCustomProtocol.h` eingebettet (kein separates Include). `lgfx_user/LGFX_ESP32_sample.hpp` **niemals einbinden** — enthält `VSPI_HOST` (auf ESP32-S2 nicht vorhanden → Compile-Fehler)
+
+### Logischer Canvas
+- **W=240, H=320** — Portrait, entspricht setRotation(0) auf ST7789 mit panel 240×320
+
+### Layout (Portrait 240×320)
 
 | Y   | H  | Inhalt                                         |
 |-----|----|------------------------------------------------|
@@ -167,27 +173,30 @@ Die LovyanGFX-Sampledatei `lgfx_user/LGFX_ESP32_sample.hpp` **niemals einbinden*
 | 271 | 49 | TC \| ABS \| BB (bright wenn aktiv)            |
 
 ### Bildschirmmodi
-- **LOGO-Modus:** Lamborghini-Logo (gold `C_GOLD=0xFEA0` auf schwarz) — beim Start und nach 5 Min. ohne Daten
+- **LOGO-Modus:** Lamborghini-Logo (gold auf schwarz) — beim Start und nach 5 Min. ohne Daten
 - **DASH-Modus:** vollständiges Dashboard — sobald erstes SimHub-Paket eintrifft
 - Timeout-Konstante: `300000UL` ms in `loop()`
 
 ### Logo-Bitmap
-- Datei: `src/logo.h` — 1bpp PROGMEM-Array, MSB-first, Zeilenauffüllung auf Bytegrenze
-- Aktuell: Platzhalter (alle Null → leerer Bildschirm)
-- Generieren: `python tools/convert_logo.py <bild.png>` (benötigt `pip install Pillow`)
-- Zielgröße: 200×210 px (zentriert auf 240×320)
+- Datei: `src/logo.h` — 1bpp PROGMEM-Array, MSB-first, 30 Bytes/Zeile × 320 Zeilen = 9600 Bytes
+- Generieren: `python tools/convert_logo.py tools/lamborghini.png` (Standard: 240×320)
+- Benötigt: `pip install Pillow`
 
-### Farben (RGB565)
-| Konstante | Wert   | Farbe                      |
-|-----------|--------|----------------------------|
-| C_BG      | TFT_BLACK | Hintergrund          |
-| C_DIV     | 0x2945 | Trennlinien (dunkelgrau)  |
-| C_LABEL   | 0x8410 | Beschriftungen (mittelgrau)|
-| C_GOLD    | 0xFEA0 | Logo-Gold (#FFD700)       |
+### Farben
+| Konstante | Wert      | Farbe                                        |
+|-----------|-----------|----------------------------------------------|
+| C_BG      | TFT_BLACK | Hintergrund                                  |
+| C_DIV     | TFT_GREY  | Trennlinien                                  |
+| C_LABEL   | TFT_LIGHTGREY | Beschriftungen                           |
+| C_GOLD    | 0xFFD700  | Logo-Gold — **RGB888**, nicht TFT_GOLD (RGB565 → erscheint mintgrün in drawBitmap) |
 
-### Display-Einstellungen
-- Farb-Inversion: `cfg.invert = true`
-- Rotation: `tft.setRotation(1)` (90° im Uhrzeigersinn)
+### Häufige Fehler
+| Fehler | Ursache | Fix |
+|--------|---------|-----|
+| Bild versetzt (x≈60, y≈240) | Panel_ILI9341 statt ST7789 | `lgfx::Panel_ST7789` verwenden |
+| Logo mintgrün statt gold | `TFT_GOLD` (RGB565) als uint32_t | `0xFFD700` (RGB888) direkt angeben |
+| Unteres Viertel fehlt | W/H-Konstanten falsch | W=240, H=320 bei setRotation(0)+ST7789 |
+| VSPI_HOST Compile-Fehler | lgfx_user/LGFX_ESP32_sample.hpp inkludiert | Niemals einbinden, LGFX inline in SHCustomProtocol.h |
 
 ---
 
@@ -234,4 +243,6 @@ extra_scripts = post:upload_reset.py
 | 2026-06-25 | `SHCustomProtocol.h` überarbeitet — neues Layout mit RPM-Balken, LGFX inline mit SPI2_HOST |
 | 2026-06-25 | `src/logo.h` + `tools/convert_logo.py` — Lamborghini-Logo (gold/schwarz), 5-Min-Timeout |
 | 2026-06-26 | `upload_reset.py` — automatisches Flashen via 1200bps Touch |
-| 2026-06-26 | Display-Inversion (`cfg.invert = true`) und Rotation (`setRotation(1)`) korrigiert |
+| 2026-06-26 | Display-Inversion (`cfg.invert = true`) und Rotation korrigiert |
+| 2026-06-26 | Panel auf ST7789 umgestellt (ILI9341 war falsch → Bild versetzt) |
+| 2026-06-26 | `cfg.rgb_order=false`, `setRotation(0)` (vom Benutzer bestätigt), `C_GOLD=0xFFD700` (RGB888) |

@@ -184,7 +184,14 @@ pio run --target clean
 Das Display wird vollständig über `src/SHCustomProtocol.h` gesteuert — kein SimHub-OLED-Dashboard.
 SimHub sendet Telemetrie via Custom Protocol (serielle Pipe), der ESP rendert selbst.
 
-### Wichtiger Fix: VSPI_HOST auf ESP32-S2 nicht verfügbar
+### Display-Hardware
+- **Modul:** ST7789, physisch 320×240 (Landscape-PCB), hochkant verbaut → Portrait-Ansicht 240×320
+- **Treiber in LovyanGFX:** `lgfx::Panel_ST7789` — **nicht** Panel_ILI9341 (falscher Chip → Versatz x=60/y=240)
+- **panel_width=240, panel_height=320** — IC-native Dimensionen, nicht die PCB-Maße
+- **setRotation(0)** — vom Benutzer getestet und festgelegt. **Niemals ändern.**
+- **cfg.invert=true, cfg.rgb_order=false** — für korrekte Farben auf diesem Modul
+
+### Fix: VSPI_HOST auf ESP32-S2 nicht verfügbar
 `VSPI_HOST` existiert im ESP32-S2 SDK nicht → Compile-Fehler.
 **Lösung:** LGFX-Klasse direkt in `SHCustomProtocol.h` eingebettet mit `SPI2_HOST`.
 Die LovyanGFX-Sampledatei `lgfx_user/LGFX_ESP32_sample.hpp` **niemals einbinden** — sie enthält `VSPI_HOST`.
@@ -201,23 +208,22 @@ Die LovyanGFX-Sampledatei `lgfx_user/LGFX_ESP32_sample.hpp` **niemals einbinden*
 | 271 | 49 | TC \| ABS \| BB (bright wenn aktiv) |
 
 ### Bildschirmmodi
-- **LOGO-Modus:** Lamborghini-Logo (gold `C_GOLD=0xFEA0` auf schwarz) — beim Start und nach 5 Min. ohne Daten
+- **LOGO-Modus:** Lamborghini-Logo (gold auf schwarz) — beim Start und nach 5 Min. ohne Daten
 - **DASH-Modus:** vollständiges Dashboard — sobald erstes SimHub-Paket eintrifft
 - Timeout-Konstante: `300000UL` ms in `loop()`
 
 ### Logo-Bitmap
 - Datei: `src/logo.h` — 1bpp PROGMEM-Array, MSB-first, Zeilenauffüllung auf Bytegrenze
-- Aktuell: Platzhalter (alle Null → leerer Bildschirm)
-- Generieren: `python tools/convert_logo.py <bild.png>` (benötigt `pip install Pillow`)
-- Zielgröße: 200×210 px (zentriert auf 240×320)
+- Generieren: `python tools/convert_logo.py tools/lamborghini.png` (Standard: 240×320)
+- Benötigt: `pip install Pillow`
 
-### Farben (RGB565)
+### Farben
 | Konstante | Wert | Farbe |
 |---|---|---|
 | C_BG | TFT_BLACK | Hintergrund |
-| C_DIV | 0x2945 | Trennlinien (dunkelgrau) |
-| C_LABEL | 0x8410 | Beschriftungen (mittelgrau) |
-| C_GOLD | 0xFEA0 | Logo-Gold (#FFD700) |
+| C_DIV | TFT_GREY | Trennlinien |
+| C_LABEL | TFT_LIGHTGREY | Beschriftungen |
+| C_GOLD | 0xFFD700 | Logo-Gold (RGB888 — nicht RGB565!) |
 
 ## Flash / Upload (kein Boot-Button nötig)
 
@@ -250,7 +256,8 @@ extra_scripts = post:upload_reset.py
 
 ### Display-Einstellungen (`SHCustomProtocol.h`)
 - Farb-Inversion: `cfg.invert = true`
-- Rotation: `tft.setRotation(1)` (90° im Uhrzeigersinn)
+- RGB-Reihenfolge: `cfg.rgb_order = false`
+- **Rotation: `tft.setRotation(0)` — vom Benutzer festgelegt, niemals ändern**
 
 ## Änderungsprotokoll
 
@@ -265,3 +272,6 @@ extra_scripts = post:upload_reset.py
 | 2026-06-25 | `src/logo.h` + `tools/convert_logo.py` hinzugefügt — Lamborghini-Logo (gold/schwarz), Platzhalter, 5-Min-Timeout | Claude |
 | 2026-06-26 | `upload_reset.py` hinzugefügt — automatisches Flashen via 1200bps Touch, kein Boot-Button nötig | Claude |
 | 2026-06-26 | Display-Inversion (`cfg.invert = true`) und Rotation (`setRotation(1)`) korrigiert | Claude |
+| 2026-06-26 | Panel auf ST7789 umgestellt (war ILI9341 → falscher Chip) | Claude |
+| 2026-06-26 | `cfg.rgb_order=false`, `setRotation(0)` (vom Benutzer bestätigt), C_GOLD=0xFFD700 (RGB888) | Ron/Claude |
+| 2026-06-26 | Layout auf Portrait 240×320 stabilisiert — W=240, H=320 korrekt für ST7789+setRotation(0) | Claude |

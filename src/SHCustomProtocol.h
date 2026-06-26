@@ -6,10 +6,12 @@
 #include <string.h>
 #include "logo.h"
 
-// ── LGFX display config — ESP32-S2, SPI TFT 240×320 ────────────
+// ── LGFX display config ──────────────────────────────────────────
+// Panel: ST7789, physically 320×240, mounted portrait via setRotation(0)
+// → logical canvas 240×320
 // Pins: MOSI=35  SCK=36  CS=34  DC=33  RST=38
 class LGFX : public lgfx::LGFX_Device {
-    lgfx::Panel_ILI9341 _panel;
+    lgfx::Panel_ST7789  _panel;
     lgfx::Bus_SPI       _bus;
 public:
     LGFX(void) {
@@ -38,7 +40,7 @@ public:
             cfg.panel_height     = 320;
             cfg.readable         = false;
             cfg.invert           = true;
-            cfg.rgb_order        = true;
+            cfg.rgb_order        = false;
             cfg.dlen_16bit       = false;
             cfg.bus_shared       = false;
             _panel.config(cfg);
@@ -49,14 +51,14 @@ public:
 
 static LGFX tft;
 
-// ── Display size (portrait 240×320) ─────────────────────────────
+// ── Logical canvas after setRotation(0) on ST7789: 240×320 ──────
 static const int W = 240;
 static const int H = 320;
 
-// ── Section layout ───────────────────────────────────────────────
-//  Y    H    content
+// ── Section layout (portrait 240×320) ───────────────────────────
+//   Y    H    content
 //   0   18   RPM bar
-//  19  100   Gear (left half) | Speed (right half)
+//  19  100   Gear (left W/2) | Speed (right W/2)
 // 120   50   Current lap time
 // 171   50   Best lap time
 // 222   48   Delta
@@ -70,9 +72,9 @@ static const int ASST_Y = 271, ASST_H = 49;
 
 // ── Color palette ────────────────────────────────────────────────
 static const uint32_t C_BG    = TFT_BLACK;
-static const uint32_t C_DIV   = 0x2945;  // dark gray — dividers
-static const uint32_t C_LABEL = 0x8410;  // mid gray  — labels
-static const uint32_t C_GOLD  = 0xFEA0;  // #FFD700   — logo
+static const uint32_t C_DIV   = TFT_GREY;
+static const uint32_t C_LABEL = TFT_LIGHTGREY;
+static const uint32_t C_GOLD  = 0xFFD700;  // RGB888
 
 // ── Per-field dirty tracking ─────────────────────────────────────
 struct Field { char prev[32]; int32_t prevColor; };
@@ -123,26 +125,21 @@ private:
     // ── Logo screen ──────────────────────────────────────────────
     void drawLogo() {
         tft.fillScreen(C_BG);
-        int x = (W - LOGO_W) / 2;
-        int y = (H - LOGO_H) / 2;
-        tft.drawBitmap(x, y, LOGO_BITMAP, LOGO_W, LOGO_H, C_GOLD, C_BG);
+        tft.drawBitmap(0, 0, LOGO_BITMAP, LOGO_W, LOGO_H, C_GOLD, C_BG);
     }
 
-    // ── Dashboard chrome — drawn once when entering dash mode ────
+    // ── Dashboard chrome (drawn once on entering dash mode) ──────
     void drawChrome() {
-        // Horizontal dividers
         tft.drawFastHLine(0, RPM_Y + RPM_H, W, C_DIV);
         tft.drawFastHLine(0, CLAP_Y - 1,    W, C_DIV);
         tft.drawFastHLine(0, BLAP_Y - 1,    W, C_DIV);
         tft.drawFastHLine(0, DELT_Y - 1,    W, C_DIV);
         tft.drawFastHLine(0, ASST_Y - 1,    W, C_DIV);
 
-        // Vertical dividers
         tft.drawFastVLine(W / 2,     MAIN_Y, MAIN_H, C_DIV);
         tft.drawFastVLine(W / 3,     ASST_Y, ASST_H, C_DIV);
         tft.drawFastVLine(W * 2 / 3, ASST_Y, ASST_H, C_DIV);
 
-        // Section labels
         tft.setTextColor(C_LABEL, C_BG);
         tft.drawString     ("CUR LAP",  4,       CLAP_Y + 3, 2);
         tft.drawString     ("BEST LAP", 4,       BLAP_Y + 3, 2);
@@ -168,8 +165,8 @@ private:
         if (rpmPct == prevRpm) return;
         int bw  = max(0, min(W, (W * rpmPct) / 100));
         int bh  = RPM_H - 4;
-        uint32_t col = (rpmPct >= rpmRL)      ? TFT_RED    :
-                       (rpmPct >= rpmRL - 5)  ? TFT_ORANGE : 0x07E0;
+        uint32_t col = (rpmPct >= rpmRL)     ? TFT_RED    :
+                       (rpmPct >= rpmRL - 5) ? TFT_ORANGE : 0x07E0;
         if (prevRpm > rpmPct)
             tft.fillRect(bw, 2, W - bw, bh, C_BG);
         if (bw > 0)
@@ -231,8 +228,8 @@ private:
 public:
     void setup() {
         tft.init();
-        tft.setRotation(7);
-        drawLogo(); // show logo before SimHub connects
+        tft.setRotation(0);
+        drawLogo();
     }
 
     void read() {
@@ -261,11 +258,10 @@ public:
         FlowSerialReadStringUntil('\n');
 
         _lastDataMs = millis();
-        if (_mode != Mode::DASH) enterDash(); // switch from logo to dashboard
+        if (_mode != Mode::DASH) enterDash();
     }
 
     void loop() {
-        // After 5 minutes without data → back to logo
         if (_mode == Mode::DASH && (millis() - _lastDataMs > 300000UL)) {
             _mode = Mode::LOGO;
             drawLogo();

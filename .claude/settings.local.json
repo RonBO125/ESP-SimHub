@@ -15,7 +15,8 @@
       "PowerShell(Get-ChildItem -Path \"$env:USERPROFILE\\\\.platformio\" -Recurse -Filter \"main.py\" -Depth 6 | Select-Object FullName | Head -20)",
       "PowerShell(Get-ChildItem \"$env:USERPROFILE\\\\.platformio\\\\platforms\" -Directory | Select-Object Name)",
       "PowerShell(Get-ChildItem \"$env:USERPROFILE\\\\.platformio\" -Recurse -Filter \"esp32-s2-saola-1.json\" | Select-Object FullName)",
-      "PowerShell(Get-ChildItem \"$env:USERPROFILE\\\\.platformio\\\\packages\" -Recurse -Filter \"esptool.py\" | Select-Object FullName)"
+      "PowerShell(Get-ChildItem \"$env:USERPROFILE\\\\.platformio\\\\packages\" -Recurse -Filter \"esptool.py\" | Select-Object FullName)",
+      "WebFetch(domain:de.aliexpress.com)"
     ]
   }
 }

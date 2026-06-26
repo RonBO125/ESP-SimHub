@@ -10,7 +10,7 @@ Output: src/logo.h  (overwrite and recompile)
 
 The script inverts the image so dark pixels become the logo (drawn in gold)
 and light pixels become the background (black).
-Target size defaults to 200x210 to fit a 240x320 TFT.
+Target size defaults to 240x320 to fit a 240x320 TFT.
 """
 
 import sys
@@ -18,7 +18,7 @@ import os
 from PIL import Image
 
 
-def convert(src_path: str, w: int = 200, h: int = 210) -> None:
+def convert(src_path: str, w: int = 240, h: int = 320) -> None:
     img = Image.open(src_path).convert("L")
     img = img.resize((w, h), Image.LANCZOS)
 
@@ -73,6 +73,6 @@ if __name__ == "__main__":
         sys.exit(1)
 
     src   = sys.argv[1]
-    width  = int(sys.argv[2]) if len(sys.argv) > 2 else 200
-    height = int(sys.argv[3]) if len(sys.argv) > 3 else 210
+    width  = int(sys.argv[2]) if len(sys.argv) > 2 else 240
+    height = int(sys.argv[3]) if len(sys.argv) > 3 else 320
     convert(src, width, height)
