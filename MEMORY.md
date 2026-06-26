@@ -219,6 +219,39 @@ Die LovyanGFX-Sampledatei `lgfx_user/LGFX_ESP32_sample.hpp` **niemals einbinden*
 | C_LABEL | 0x8410 | Beschriftungen (mittelgrau) |
 | C_GOLD | 0xFEA0 | Logo-Gold (#FFD700) |
 
+## Flash / Upload (kein Boot-Button nötig)
+
+### Voraussetzung
+SimHub muss beim Flashen **geschlossen** sein (blockiert sonst den COM-Port).
+
+### Ablauf (automatisch via `upload_reset.py`)
+1. Script erkennt ESP32 automatisch über Espressif VID `0x303A` — unabhängig von der COM-Nummer
+2. Sendet 1200bps Touch → ESP32 resettet in Bootloader
+3. Wartet bis COM-Port wieder verfügbar (Bootloader = gleicher Port)
+4. Ruft esptool direkt auf
+
+### Konfiguration in `platformio.ini`
+```ini
+upload_protocol = custom
+upload_port = COM8          ; Fallback — Script erkennt Port automatisch
+extra_scripts = post:upload_reset.py
+```
+
+### COM-Ports (können sich nach Neustart ändern)
+| Port | Gerät |
+|------|-------|
+| COM8 | ESP32-S2 (TinyUSB CDC, VID 0x303A) — App + Bootloader |
+| COM4 | MOZA SRP Pedals |
+| COM3 | SimHub Controller Remapper Bridge |
+
+### esptool-Pfad
+`~/.platformio/packages/tool-esptoolpy/esptool.py`  
+**Nicht** `python -m esptool` — Modul nicht im PlatformIO venv.
+
+### Display-Einstellungen (`SHCustomProtocol.h`)
+- Farb-Inversion: `cfg.invert = true`
+- Rotation: `tft.setRotation(1)` (90° im Uhrzeigersinn)
+
 ## Änderungsprotokoll
 
 | Datum | Änderung | Autor |
@@ -230,3 +263,5 @@ Die LovyanGFX-Sampledatei `lgfx_user/LGFX_ESP32_sample.hpp` **niemals einbinden*
 | 2026-06-24 | PL9823 Test-LEDs: Helligkeit von 100% (255) auf 10% (25) reduziert in [src/SHRGBLedsNeoPixel.h](src/SHRGBLedsNeoPixel.h) | Ron |
 | 2026-06-25 | `SHCustomProtocol.h` komplett überarbeitet — neues Layout mit RPM-Balken, Dirty-Tracking, LGFX inline mit SPI2_HOST | Claude |
 | 2026-06-25 | `src/logo.h` + `tools/convert_logo.py` hinzugefügt — Lamborghini-Logo (gold/schwarz), Platzhalter, 5-Min-Timeout | Claude |
+| 2026-06-26 | `upload_reset.py` hinzugefügt — automatisches Flashen via 1200bps Touch, kein Boot-Button nötig | Claude |
+| 2026-06-26 | Display-Inversion (`cfg.invert = true`) und Rotation (`setRotation(1)`) korrigiert | Claude |

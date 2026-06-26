@@ -142,3 +142,96 @@ aktivieren. Keine direkte Initialisierung außerhalb von `setup()`.
 - **Encoder-Button-Pins:** `ENCODER1_BUTTON_PIN -1` und `ENCODER2_BUTTON_PIN -1` —
   die Encoder-Taster sind als separate Buttons 1 & 2 (`BUTTON_PIN_1 = 14`,
   `BUTTON_PIN_2 = 15`) konfiguriert, nicht direkt über den Encoder-Handler.
+
+---
+
+## Display-Layout (SHCustomProtocol.h)
+
+Das Display wird vollständig über `src/SHCustomProtocol.h` gesteuert — kein SimHub-OLED-Dashboard.
+SimHub sendet Telemetrie via Custom Protocol (serielle Pipe), der ESP rendert selbst.
+
+### Wichtiger Fix: VSPI_HOST auf ESP32-S2 nicht verfügbar
+`VSPI_HOST` existiert im ESP32-S2 SDK nicht → Compile-Fehler.
+**Lösung:** LGFX-Klasse direkt in `SHCustomProtocol.h` eingebettet mit `SPI2_HOST`.
+Die LovyanGFX-Sampledatei `lgfx_user/LGFX_ESP32_sample.hpp` **niemals einbinden** — sie enthält `VSPI_HOST`.
+
+### Display-Layout (Portrait 240×320)
+
+| Y   | H  | Inhalt                                         |
+|-----|----|------------------------------------------------|
+| 0   | 18 | RPM-Balken (grün→orange→rot)                   |
+| 19  | 100| Gang links (gelb, Font 4 ×3) \| Speed rechts (grün, Font 6) |
+| 120 | 50 | Aktuelle Rundenzeit (weiß / rot bei ungültig)  |
+| 171 | 50 | Beste Rundenzeit (cyan)                        |
+| 222 | 48 | Delta (grün wenn negativ, rot wenn positiv)    |
+| 271 | 49 | TC \| ABS \| BB (bright wenn aktiv)            |
+
+### Bildschirmmodi
+- **LOGO-Modus:** Lamborghini-Logo (gold `C_GOLD=0xFEA0` auf schwarz) — beim Start und nach 5 Min. ohne Daten
+- **DASH-Modus:** vollständiges Dashboard — sobald erstes SimHub-Paket eintrifft
+- Timeout-Konstante: `300000UL` ms in `loop()`
+
+### Logo-Bitmap
+- Datei: `src/logo.h` — 1bpp PROGMEM-Array, MSB-first, Zeilenauffüllung auf Bytegrenze
+- Aktuell: Platzhalter (alle Null → leerer Bildschirm)
+- Generieren: `python tools/convert_logo.py <bild.png>` (benötigt `pip install Pillow`)
+- Zielgröße: 200×210 px (zentriert auf 240×320)
+
+### Farben (RGB565)
+| Konstante | Wert   | Farbe                      |
+|-----------|--------|----------------------------|
+| C_BG      | TFT_BLACK | Hintergrund          |
+| C_DIV     | 0x2945 | Trennlinien (dunkelgrau)  |
+| C_LABEL   | 0x8410 | Beschriftungen (mittelgrau)|
+| C_GOLD    | 0xFEA0 | Logo-Gold (#FFD700)       |
+
+### Display-Einstellungen
+- Farb-Inversion: `cfg.invert = true`
+- Rotation: `tft.setRotation(1)` (90° im Uhrzeigersinn)
+
+---
+
+## Flash / Upload (kein Boot-Button nötig)
+
+### Voraussetzung
+SimHub muss beim Flashen **geschlossen** sein (blockiert sonst den COM-Port).
+
+### Ablauf (automatisch via `upload_reset.py`)
+1. Script erkennt ESP32 automatisch über Espressif VID `0x303A` — unabhängig von der COM-Nummer
+2. Sendet 1200bps Touch → ESP32 resettet in Bootloader
+3. Wartet bis COM-Port wieder verfügbar (Bootloader = gleicher Port)
+4. Ruft esptool direkt auf
+
+### Konfiguration in `platformio.ini`
+```ini
+upload_protocol = custom
+upload_port = COM8          ; Fallback — Script erkennt Port automatisch
+extra_scripts = post:upload_reset.py
+```
+
+### COM-Ports (können sich nach Neustart ändern)
+| Port | Gerät                  |
+|------|------------------------|
+| COM8 | ESP32-S2 (TinyUSB CDC, VID 0x303A) — App + Bootloader |
+| COM4 | MOZA SRP Pedals        |
+| COM3 | SimHub Controller Remapper Bridge |
+
+### esptool-Pfad
+`~/.platformio/packages/tool-esptoolpy/esptool.py`  
+**Nicht** `python -m esptool` — Modul nicht im PlatformIO venv.
+
+---
+
+## Änderungsprotokoll
+
+| Datum      | Änderung |
+|------------|----------|
+| 2026-06-24 | Projekt initialisiert |
+| 2026-06-24 | MEMORY.md erstellt |
+| 2026-06-24 | `.gitignore` erweitert — Python-Cache (`__pycache__/`, `*.pyc`, `*.pyo`) hinzugefügt |
+| 2026-06-24 | `build_src_filter` vereinfacht — `.git/**`, `__pycache__/`, `*.pyc` entfernt |
+| 2026-06-24 | PL9823 Test-LEDs: Helligkeit von 100% (255) auf 10% (25) reduziert |
+| 2026-06-25 | `SHCustomProtocol.h` überarbeitet — neues Layout mit RPM-Balken, LGFX inline mit SPI2_HOST |
+| 2026-06-25 | `src/logo.h` + `tools/convert_logo.py` — Lamborghini-Logo (gold/schwarz), 5-Min-Timeout |
+| 2026-06-26 | `upload_reset.py` — automatisches Flashen via 1200bps Touch |
+| 2026-06-26 | Display-Inversion (`cfg.invert = true`) und Rotation (`setRotation(1)`) korrigiert |
