@@ -38,7 +38,7 @@ public:
             cfg.panel_height     = 320;
             cfg.readable         = false;
             cfg.invert           = true;
-            cfg.rgb_order        = false;
+            cfg.rgb_order        = true;
             cfg.dlen_16bit       = false;
             cfg.bus_shared       = false;
             _panel.config(cfg);
@@ -231,7 +231,7 @@ private:
 public:
     void setup() {
         tft.init();
-        tft.setRotation(3);
+        tft.setRotation(7);
         drawLogo(); // show logo before SimHub connects
     }
 
