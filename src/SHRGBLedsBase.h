@@ -96,9 +96,12 @@ public:
 		}
 
 		if (_maxLeds > 0) {
+			onDataReceived();
 			show();
 		}
 	}
+	
+	virtual void onDataReceived() {}
 };
 
 #endif

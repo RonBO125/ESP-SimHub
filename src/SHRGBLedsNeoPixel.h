@@ -8,6 +8,9 @@
 class SHRGBLedsNeoPixel : public SHRGBLedsBase {
 private:
 	unsigned long lastRead = 0;
+	unsigned long _testStartMs = 0;
+	bool _testModeActive = false;
+	unsigned long _testTimeoutMs = 10000UL; // 10 Sekunden
 
 protected:
 	Adafruit_NeoPixel * NeoPixel_strip;
@@ -24,10 +27,22 @@ public:
 				NeoPixel_strip->setPixelColor(i, 25, 0, 0);  // 25% Helligkeit (0.1 * 255 = 25)
 				NeoPixel_strip->show();
 			}
+			_testStartMs = millis();
+			_testModeActive = true;
 		}
 	}
 
 	void show() {
+		// Test-Modus nach Timeout oder bei SimHub-Daten deaktivieren
+		if (_testModeActive) {
+			if (millis() - _testStartMs >= _testTimeoutMs || lastRead > 0) {
+				for (int i = 0; i < _maxLeds; i++) {
+					NeoPixel_strip->setPixelColor(i, 0, 0, 0);
+				}
+				NeoPixel_strip->show();
+				_testModeActive = false;
+			}
+		}
 		NeoPixel_strip->show();
 	}
 
@@ -36,6 +51,22 @@ protected:
 		NeoPixel_strip->setPixelColor(lednumber, r, g, b);
 	}
 	
+public:
+	void onDataReceived() override {
+		lastRead = millis();
+	}
+	
+	void checkTestTimeout() {
+		if (_testModeActive) {
+			if (millis() - _testStartMs >= _testTimeoutMs) {
+				for (int i = 0; i < _maxLeds; i++) {
+					NeoPixel_strip->setPixelColor(i, 0, 0, 0);
+				}
+				NeoPixel_strip->show();
+				_testModeActive = false;
+			}
+		}
+	}
 };
 
 #endif

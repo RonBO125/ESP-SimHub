@@ -1526,6 +1526,11 @@ void loop() {
 #endif
 	shCustomProtocol.loop();
 
+	// Test-Modus PL9823 LEDs: Timeout prüfen
+#ifdef INCLUDE_PL9823
+	shRGBLedsPL9823.checkTestTimeout();
+#endif
+
 	// Wait for data
 	if (FlowSerialAvailable() > 0) {
 		if (FlowSerialTimedRead() == MESSAGE_HEADER)
