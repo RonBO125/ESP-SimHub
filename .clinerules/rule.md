@@ -163,6 +163,7 @@ SimHub sendet Telemetrie via Custom Protocol (serielle Pipe), der ESP rendert se
 
 ### Layout (Portrait 240×320)
 
+#### Layout 0 - Standard (Default)
 | Y   | H  | Inhalt                                         |
 |-----|----|------------------------------------------------|
 | 0   | 18 | RPM-Balken (grün→orange→rot)                   |
@@ -170,7 +171,27 @@ SimHub sendet Telemetrie via Custom Protocol (serielle Pipe), der ESP rendert se
 | 120 | 50 | Aktuelle Rundenzeit (weiß / rot bei ungültig)  |
 | 171 | 50 | Beste Rundenzeit (cyan)                        |
 | 222 | 48 | Delta (grün wenn negativ, rot wenn positiv)    |
-| 271 | 49 | TC \| ABS \| BB (bright wenn aktiv)            |
+| 271 | 39 | TC \| ABS \| BB (bright wenn aktiv)            |
+| 311 | 19 | **Reifentemperaturen (FL, FR, RL, RR)**        |
+
+#### Layout 1 - Rennmodus (Performance)
+| Y   | H  | Inhalt                                         |
+|-----|----|------------------------------------------------|
+| 0   | 36 | RPM-Balken (grün→orange→rot, doppelte Höhe)    |
+| 37  | 80 | Speed (sehr groß, Font 7) \| Gang (Font 4)     |
+| 118 | 50 | Aktuelle Rundenzeit (weiß / rot bei ungültig)   |
+| 169 | 50 | Beste Rundenzeit (cyan)                         |
+| 220 | 32 | Delta (sehr groß, Font 4)                       |
+| 253 | 37 | TC \| ABS \| BB (reduzierte Größe)              |
+
+#### Layout 2 - Minimalistisch (Speed-Fokus)
+| Y   | H  | Inhalt                                         |
+|-----|----|------------------------------------------------|
+| 0   | 18 | RPM-Balken (grün→orange→rot)                   |
+| 19  | 140| **Gang (riesig, Font 7)** \| Speed (Font 3)    |
+| 160 | 50 | Aktuelle Rundenzeit (weiß / rot bei ungültig)   |
+| 211 | 48 | Delta (groß, Font 4)                           |
+| 260 | 20 | TC \| ABS (nur Symbole, keine Werte)            |
 
 ### Bildschirmmodi
 - **LOGO-Modus:** Lamborghini-Logo (gold auf schwarz) — beim Start und nach 5 Min. ohne Daten
@@ -246,3 +267,7 @@ extra_scripts = post:upload_reset.py
 | 2026-06-26 | Display-Inversion (`cfg.invert = true`) und Rotation korrigiert |
 | 2026-06-26 | Panel auf ST7789 umgestellt (ILI9341 war falsch → Bild versetzt) |
 | 2026-06-26 | `cfg.rgb_order=false`, `setRotation(0)` (vom Benutzer bestätigt), `C_GOLD=0xFFD700` (RGB888) |
+| 2026-06-29 | Layout-Umschaltfunktion hinzugefügt — 3 alternative Anordnungen (Standard, Rennmodus, Minimalistisch) |
+| 2026-06-29 | Layout-Dokumentation in rule.md ergänzt mit detaillierten Tabellen für alle 3 Modi |
+| 2026-06-29 | Persistente Speicherung des Layouts via Preferences-API |
+| 2026-06-29 | `switchLayout()`-Funktion für Button-gesteuerten Wechsel |
