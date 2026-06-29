@@ -67,12 +67,13 @@ static const int H = 320;
 // 311   19   Tyre Temperatures (FL, FR, RL, RR)
 // Layout 1 (Standard) - Balance zwischen allen Werten
 static const int LAYOUT1_RPM_Y    = 0,   LAYOUT1_RPM_H    = 18;
-static const int LAYOUT1_MAIN_Y   = 19,  LAYOUT1_MAIN_H   = 100;
-static const int LAYOUT1_CLAP_Y   = 120, LAYOUT1_CLAP_H   = 50;
-static const int LAYOUT1_BLAP_Y   = 171, LAYOUT1_BLAP_H   = 50;
-static const int LAYOUT1_DELT_Y   = 222, LAYOUT1_DELT_H   = 48;
+static const int LAYOUT1_MAIN_Y   = 19,  LAYOUT1_MAIN_H   = 152;
+static const int LAYOUT1_CLAP_Y   = 172, LAYOUT1_CLAP_H   = 32;
+static const int LAYOUT1_DELT_Y   = 205, LAYOUT1_DELT_H   = 32;
+static const int LAYOUT1_BLAP_Y   = 238, LAYOUT1_BLAP_H   = 32;
 static const int LAYOUT1_ASST_Y   = 271, LAYOUT1_ASST_H   = 39;
-static const int LAYOUT1_TYRES_Y  = 311, LAYOUT1_TYRES_H  = 19;
+// static const int LAYOUT1_ASST_Y   = 271, LAYOUT1_ASST_H   = 39;
+// static const int LAYOUT1_TYRES_Y  = 311, LAYOUT1_TYRES_H  = 19;
 
     // Layout 2 (Rennmodus) - Fokus auf aktuelle Leistung
     // Größere Speed/RPM-Anzeige, mehr Platz für Rundenzeiten
@@ -271,12 +272,12 @@ private:
         }
 
         // Tyre Temperature-Trennlinien (nur in Layout 1)
-        if (currentLayout == 0) {
-            tft.drawFastHLine(0, LAYOUT1_TYRES_Y - 1, W, C_DIV);
-            tft.drawFastVLine(W / 4, LAYOUT1_TYRES_Y, LAYOUT1_TYRES_H, C_DIV);
-            tft.drawFastVLine(W * 2 / 4, LAYOUT1_TYRES_Y, LAYOUT1_TYRES_H, C_DIV);
-            tft.drawFastVLine(W * 3 / 4, LAYOUT1_TYRES_Y, LAYOUT1_TYRES_H, C_DIV);
-        }
+        // if (currentLayout == 0) {
+        //     tft.drawFastHLine(0, LAYOUT1_TYRES_Y - 1, W, C_DIV);
+        //     tft.drawFastVLine(W / 4, LAYOUT1_TYRES_Y, LAYOUT1_TYRES_H, C_DIV);
+        //     tft.drawFastVLine(W * 2 / 4, LAYOUT1_TYRES_Y, LAYOUT1_TYRES_H, C_DIV);
+        //     tft.drawFastVLine(W * 3 / 4, LAYOUT1_TYRES_Y, LAYOUT1_TYRES_H, C_DIV);
+        // }
 
         // Layout-spezifische Beschriftungen
         if (currentLayout == 0 || currentLayout == 1) { // Layout 1 und 2 haben separate CLAP/BLAP
@@ -287,24 +288,27 @@ private:
 
         if (currentLayout == 0 || currentLayout == 1) { // Layout 1 und 2 haben separate Delta
             tft.setTextColor(C_LABEL, C_BG);
-            tft.drawCentreString("DELTA", W / 2, DELT_Y + 3, 2);
+            tft.drawString("DELTA", 4, DELT_Y + 3, 2);
         }
 
         if (currentLayout == 0 || currentLayout == 1) { // Layout 1 und 2 haben separate Assist-Systeme
             tft.setTextColor(C_LABEL, C_BG);
-            tft.drawCentreString("TC", W / 6, ASST_Y + 5, 2);
-            tft.drawCentreString("ABS", W / 2, ASST_Y + 5, 2);
-            tft.drawCentreString("BB", W * 5/6, ASST_Y + 5, 2);
+            // tft.drawCentreString("TC", W / 6, ASST_Y + 5, 2);
+            // tft.drawCentreString("ABS", W / 2, ASST_Y + 5, 2);
+            // tft.drawCentreString("BB", W * 5/6, ASST_Y + 5, 2);
+        tft.drawCentreString("TC",      W / 6,   ASST_Y + 5, 2);
+        tft.drawCentreString("ABS",     W / 2,   ASST_Y + 5, 2);
+        tft.drawCentreString("BB",      W * 5/6, ASST_Y + 5, 2);            
         }
 
         // Tyre Temperature-Beschriftungen (nur in Layout 1)
-        if (currentLayout == 0) {
-            tft.setTextColor(C_LABEL, C_BG);
-            tft.drawCentreString("FL", W / 8, LAYOUT1_TYRES_Y + 5, 2);
-            tft.drawCentreString("FR", W * 3/8, LAYOUT1_TYRES_Y + 5, 2);
-            tft.drawCentreString("RL", W * 5/8, LAYOUT1_TYRES_Y + 5, 2);
-            tft.drawCentreString("RR", W * 7/8, LAYOUT1_TYRES_Y + 5, 2);
-        }
+        // if (currentLayout == 0) {
+        //     tft.setTextColor(C_LABEL, C_BG);
+        //     tft.drawCentreString("FL", W / 8, LAYOUT1_TYRES_Y + 5, 2);
+        //     tft.drawCentreString("FR", W * 3/8, LAYOUT1_TYRES_Y + 5, 2);
+        //     tft.drawCentreString("RL", W * 5/8, LAYOUT1_TYRES_Y + 5, 2);
+        //     tft.drawCentreString("RR", W * 7/8, LAYOUT1_TYRES_Y + 5, 2);
+        // }
     }
 
     // ── Mode transitions ─────────────────────────────────────────
@@ -361,9 +365,10 @@ private:
     void drawGear() {
         if (!fieldChanged(fGear, gear, TFT_YELLOW)) return;
         tft.fillRect(1, MAIN_Y + 1, W / 2 - 2, MAIN_H - 2, C_BG);
-        tft.setTextSize(3);
+        tft.setTextSize(4);
         tft.setTextColor(TFT_YELLOW, C_BG);
-        tft.drawCentreString(gear, W / 4, MAIN_Y + 12, 4);
+        int gearY = (currentLayout == 0) ? MAIN_Y + 24 : MAIN_Y + 12;
+        tft.drawCentreString(gear, W / 4, gearY, 4);
         tft.setTextSize(1);
         tft.drawFastVLine(W / 2, MAIN_Y, MAIN_H, C_DIV);
     }
@@ -376,18 +381,20 @@ private:
         if (strcmp(fSpd.prev, s.c_str()) == 0 && fSpd.prevColor == TFT_GREEN) return;
 
         // Bounding-box der geänderten Zeichen MITTELS des ALTEN fSpd.prev finden
-        CharBox box = findChangedBox(fSpd.prev, s, W * 3 / 4, MAIN_Y + 16 + 16, 6, false, true);
+        int speedY = (currentLayout == 0) ? MAIN_Y + 42 : MAIN_Y + 16;
+        CharBox box = findChangedBox(fSpd.prev, s, W * 3 / 4, speedY + 48, 6, false, true);
 
         // Nur geänderten Bereich löschen
         if (box.w > 0 && box.h > 0) {
             tft.fillRect(box.x, box.y, box.w, box.h, C_BG);
         }
 
-        // Kompletten Text neu zeichnen
+        // Kompletten Text neu zeichnen, Speed + km/h als Gruppe zentriert
         tft.setTextColor(TFT_GREEN, C_BG);
-        tft.drawCentreString(s, W * 3 / 4, MAIN_Y + 16, 6);
+        tft.drawCentreString(s, W * 3 / 4, speedY, 6);
         tft.setTextColor(C_LABEL, C_BG);
-        tft.drawCentreString("km/h", W * 3 / 4, MAIN_Y + MAIN_H - 18, 2);
+        int kmhY = (currentLayout == 0) ? MAIN_Y + 94 : MAIN_Y + MAIN_H - 18;
+        tft.drawCentreString("km/h", W * 3 / 4, kmhY, 2);
 
         // fSpd.prev auf neuen Wert setzen
         strncpy(fSpd.prev, s.c_str(), 31);
@@ -401,16 +408,16 @@ private:
         if (strcmp(f.prev, val.c_str()) == 0 && f.prevColor == color) return;
 
         // Bounding-box der geänderten Zeichen MITTELS des ALTEN f.prev finden
-        CharBox box = findChangedBox(f.prev, val, W - 6, y + 32, 4, true, false);
+        CharBox box = findChangedBox(f.prev, val, W - 6, y + 29, 4, true, false);
 
         // Nur geänderten Bereich löschen
         if (box.w > 0 && box.h > 0) {
             tft.fillRect(box.x, box.y, box.w, box.h, C_BG);
         }
 
-        // Kompletten Text neu zeichnen
+        // Kompletten Text neu zeichnen, Zeit auf gleicher Höhe wie Label (y+3)
         tft.setTextColor(color, C_BG);
-        tft.drawRightString(val, W - 6, y + 22, 4);
+        tft.drawRightString(val, W - 6, y + 3, 4);
 
         // f.prev auf neuen Wert setzen
         strncpy(f.prev, val.c_str(), 31);
@@ -426,16 +433,16 @@ private:
         if (strcmp(fDelt.prev, delta.c_str()) == 0 && fDelt.prevColor == col) return;
 
         // Bounding-box der geänderten Zeichen MITTELS des ALTEN fDelt.prev finden
-        CharBox box = findChangedBox(fDelt.prev, delta, W / 2, DELT_Y + 32, 4, false, true);
+        CharBox box = findChangedBox(fDelt.prev, delta, W - 6, DELT_Y + 29, 4, true, false);
 
         // Nur geänderten Bereich löschen
         if (box.w > 0 && box.h > 0) {
             tft.fillRect(box.x, box.y, box.w, box.h, C_BG);
         }
 
-        // Kompletten Text neu zeichnen
+        // Kompletten Text neu zeichnen, Zeit auf gleicher Höhe wie Label (DELT_Y+3)
         tft.setTextColor(col, C_BG);
-        tft.drawCentreString(delta, W / 2, DELT_Y + 21, 4);
+        tft.drawRightString(delta, W - 6, DELT_Y + 3, 4);
 
         // fDelt.prev auf neuen Wert setzen
         strncpy(fDelt.prev, delta.c_str(), 31);
@@ -450,11 +457,12 @@ private:
         int cx = (column - 1) * (W / 3) + W / 6;
 
         // Layout-spezifische Positionierung
-        int yPos = ASST_Y + ((currentLayout == 0) ? 22 : 25);
+        // Label wird in drawChrome() bei ASST_Y+5 gezeichnet (font 2, ~16px hoch).
+        // fillRect darf erst ab ASST_Y+20 beginnen, damit das Label nicht überschrieben wird.
+        int yPos = ASST_Y + ((currentLayout == 0) ? 24 : 27);
         int fontSize = ((currentLayout == 0) ? 4 : 3);
 
-        // Only clear the text area, not the entire background
-        tft.fillRect(x0, yPos - 16, W / 3 - 2, 18, C_BG);
+        tft.fillRect(x0, ASST_Y + 20, W / 3 - 2, 30, C_BG);
         tft.setTextColor(col, C_BG);
         tft.drawCentreString(val, cx, yPos, fontSize);
     }
@@ -479,11 +487,11 @@ private:
         }
 
         // Zeichne die Werte
-        tft.setTextColor(TFT_WHITE, C_BG);
-        tft.drawCentreString(flVal, W / 8, LAYOUT1_TYRES_Y + 5, 2);
-        tft.drawCentreString(frVal, W * 3/8, LAYOUT1_TYRES_Y + 5, 2);
-        tft.drawCentreString(rlVal, W * 5/8, LAYOUT1_TYRES_Y + 5, 2);
-        tft.drawCentreString(rrVal, W * 7/8, LAYOUT1_TYRES_Y + 5, 2);
+        // tft.setTextColor(TFT_WHITE, C_BG);
+        // tft.drawCentreString(flVal, W / 8, LAYOUT1_TYRES_Y + 5, 2);
+        // tft.drawCentreString(frVal, W * 3/8, LAYOUT1_TYRES_Y + 5, 2);
+        // tft.drawCentreString(rlVal, W * 5/8, LAYOUT1_TYRES_Y + 5, 2);
+        // tft.drawCentreString(rrVal, W * 7/8, LAYOUT1_TYRES_Y + 5, 2);
     }
 
 public:
@@ -562,7 +570,7 @@ public:
         drawAssist(fBB,  bb,     TFT_MAGENTA, 3);
 
         // Tyre Temperatures zeichnen (nur in Layout 1)
-        drawTyreTemps();
+        // drawTyreTemps();
     }
 
 

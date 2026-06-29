@@ -175,12 +175,12 @@ SimHub sendet Telemetrie via Custom Protocol (serielle Pipe), der ESP rendert se
 | Y   | H  | Inhalt                                         |
 |-----|----|------------------------------------------------|
 | 0   | 18 | RPM-Balken (grün→orange→rot)                   |
-| 19  | 100| Gang links (gelb, Font 4 ×3) \| Speed rechts (grün, Font 6) |
-| 120 | 50 | Aktuelle Rundenzeit (weiß / rot bei ungültig)  |
-| 171 | 50 | Beste Rundenzeit (cyan)                        |
-| 222 | 48 | Delta (grün wenn negativ, rot wenn positiv)    |
-| 271 | 39 | TC \| ABS \| BB (bright wenn aktiv)            |
-| 311 | 19 | **Reifentemperaturen (FL, FR, RL, RR)**        |
+| 19  | 95 | Gang links (gelb, Font 4 ×3) \| Speed rechts (grün, Font 6) |
+| 115 | 30 | Aktuelle Rundenzeit (Label linksbündig + Zahl, rechtsbündig) |
+| 146 | 30 | Beste Rundenzeit (Label linksbündig + Zahl, rechtsbündig) |
+| 177 | 28 | Delta (Label linksbündig + Zahl, zentriert)    |
+| 206 | 34 | TC \| ABS \| BB (bright wenn aktiv)            |
+| 240 | 80 | **Reifentemperaturen (FL/FR obere Reihe, RL/RR untere Reihe, 2×2 Grid)** |
 
 #### Layout 1 - Rennmodus (Performance)
 | Y   | H  | Inhalt                                         |
