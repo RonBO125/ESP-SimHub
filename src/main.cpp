@@ -1264,6 +1264,10 @@ void buttonStatusChanged(int buttonId, byte Status) {
 
 #ifdef  INCLUDE_BUTTONMATRIX
 void buttonMatrixStatusChanged(int buttonId, byte Status) {
+	// EC11 encoder SW buttons (matrix 3 = Windows Btn 5, matrix 4 = Windows Btn 6) → Layout wechseln
+	if ((buttonId == 3 || buttonId == 4) && Status == 1) {
+		shCustomProtocol.switchLayout();
+	}
 #ifdef INCLUDE_GAMEPAD
 	Joystick.setButton(TM1638_ENABLEDMODULES * 8 + ENABLED_BUTTONS_COUNT + buttonId - 1, Status);
 	gamepadDirty = true;

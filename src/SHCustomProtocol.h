@@ -336,18 +336,6 @@ private:
         }
     }
 
-    // Layout-Umschaltfunktion (extern zugänglich)
-    void switchLayout() {
-        currentLayout = (currentLayout + 1) % 3;
-        // Layout persistent speichern
-        saveLayout();
-        // Display neu zeichnen, wenn wir im DASH-Modus sind
-        if (_mode == Mode::DASH) {
-            tft.fillScreen(C_BG);
-            drawChrome();
-        }
-    }
-
     // Gibt das aktuelle Layout zurück (0, 1 oder 2)
     uint8_t getCurrentLayout() const {
         return currentLayout;
@@ -499,6 +487,14 @@ private:
     }
 
 public:
+    void switchLayout() {
+        currentLayout = (currentLayout + 1) % 3;
+        saveLayout();
+        if (_mode == Mode::DASH) {
+            enterDash();
+        }
+    }
+
     void setup() {
         tft.init();
         tft.setRotation(0);

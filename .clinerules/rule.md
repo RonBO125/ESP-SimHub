@@ -32,8 +32,10 @@ Firmware nur für `env:esp32` bauen und flashen. Die Umgebungen `esp8266` und `e
 | TFT RST           | 38                            |
 | Button-Matrix Col | 39, 40, 41, 42                |
 | Button-Matrix Row | 43, 44, 45                    |
-| Encoder 1 CLK/DT/SW | 12, 13, 14                  |
-| Encoder 2 CLK/DT/SW | 4, 5, 15                    |
+| Encoder 1 CLK/DT    | 12, 13                      |
+| Encoder 2 CLK/DT    | 4, 5                        |
+| **Shift UP Wippe**  | **14** (KEIN EC11-Button!)  |
+| **Shift DOWN Wippe**| **15** (KEIN EC11-Button!)  |
 | RGB-LEDs (PL9823) | 17                            |
 | Frei              | 0, 2                          |
 
@@ -139,9 +141,15 @@ aktivieren. Keine direkte Initialisierung außerhalb von `setup()`.
   Bei erneuten Neustarts zuerst `ESP.getFreeHeap()` in `loop()` loggen.
 - **USB nicht verfügbar nach Neustart:** TinyUSB-Re-Enumerierung kann fehlschlagen,
   wenn der PC den USB-Port nicht freigibt. USB-Kabel trennen/stecken als Workaround.
-- **Encoder-Button-Pins:** `ENCODER1_BUTTON_PIN -1` und `ENCODER2_BUTTON_PIN -1` —
-  die Encoder-Taster sind als separate Buttons 1 & 2 (`BUTTON_PIN_1 = 14`,
-  `BUTTON_PIN_2 = 15`) konfiguriert, nicht direkt über den Encoder-Handler.
+- **Button-Zuordnung (physisch getestet):**
+  - GPIO 14 = **Shift UP Wippe** → Windows Button 1 — KEIN EC11-Druckknopf
+  - GPIO 15 = **Shift DOWN Wippe** → Windows Button 2 — KEIN EC11-Druckknopf
+  - Der Kommentar im Code (`GPIO 14 - Button (SW) [Encoder 1]`) ist **falsch und irreführend**
+  - `ENCODER1_BUTTON_PIN = -1` und `ENCODER2_BUTTON_PIN = -1` — EC11-Taster werden **nicht** über den Encoder-Handler gelesen
+  - **EC11 SW-Pins sind in die Button-Matrix eingeschleift:**
+    - EC11 Encoder 1 SW → Matrix-Button 3 → Windows Button 5
+    - EC11 Encoder 2 SW → Matrix-Button 4 → Windows Button 6
+  - Button-Matrix-Nummerierung: `rowIndex * colCount + colIndex + 1` (Zeile 78 in SHButtonMatrix.h)
 
 ---
 
@@ -221,6 +229,39 @@ SimHub sendet Telemetrie via Custom Protocol (serielle Pipe), der ESP rendert se
 
 ---
 
+## Layout-Umschaltung
+
+`switchLayout()` ist **public** in `SHCustomProtocol` und wird aus `main.cpp` aufgerufen.
+
+### Auslöser
+- EC11 Encoder 1 SW → Matrix-Button 3 → `buttonMatrixStatusChanged(3, 1)` → `shCustomProtocol.switchLayout()`
+- EC11 Encoder 2 SW → Matrix-Button 4 → `buttonMatrixStatusChanged(4, 1)` → `shCustomProtocol.switchLayout()`
+- Beide EC11-Druckknöpfe schalten durch; der Gangschalter (GPIO 14/15) ist **nicht** beteiligt
+
+### Kritische Implementierungsregel
+`switchLayout()` **muss** intern `enterDash()` aufrufen — nicht nur `fillScreen()` + `drawChrome()`.
+
+**Grund:** `enterDash()` setzt alle Feld-Caches zurück (`prevRpm = -1`, `strcpy(f.prev, "*")` für alle Felder). Ohne diesen Reset glauben `drawGear()`, `drawSpeed()` etc., dass sich nichts geändert hat, und zeichnen den neuen Layout-Inhalt **nicht**. Das Display zeigt dann nach dem Wechsel nur leere Chrome-Linien.
+
+```cpp
+// RICHTIG:
+void switchLayout() {
+    currentLayout = (currentLayout + 1) % 3;
+    saveLayout();
+    if (_mode == Mode::DASH) enterDash();  // ← Cache-Reset zwingend
+}
+
+// FALSCH (Felder bleiben leer):
+// tft.fillScreen(C_BG);
+// drawChrome();
+```
+
+### Persistenz
+Layout wird via `Preferences`-API in NVS gespeichert (`namespace "display"`, key `"layout"`).
+NVS-Schreibvorgänge können ~5–20 ms dauern — kein `delay()` drumherum nötig.
+
+---
+
 ## Flash / Upload (kein Boot-Button nötig)
 
 ### Voraussetzung
@@ -270,4 +311,6 @@ extra_scripts = post:upload_reset.py
 | 2026-06-29 | Layout-Umschaltfunktion hinzugefügt — 3 alternative Anordnungen (Standard, Rennmodus, Minimalistisch) |
 | 2026-06-29 | Layout-Dokumentation in rule.md ergänzt mit detaillierten Tabellen für alle 3 Modi |
 | 2026-06-29 | Persistente Speicherung des Layouts via Preferences-API |
-| 2026-06-29 | `switchLayout()`-Funktion für Button-gesteuerten Wechsel |
+| 2026-06-29 | `switchLayout()` public in SHCustomProtocol — aufgerufen aus `buttonMatrixStatusChanged` in main.cpp |
+| 2026-06-29 | Layout-Umschaltung via EC11-Taster (Matrix-Button 3 oder 4, Windows Button 5/6) — nicht via GPIO14 (Shift-Wippe) |
+| 2026-06-29 | Fix: `switchLayout()` ruft `enterDash()` auf (nicht nur `fillScreen`+`drawChrome`) — zwingend für Cache-Invalidierung |

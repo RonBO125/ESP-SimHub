@@ -33,6 +33,39 @@ pio run -e esp32                        # kompilieren
 pio run -e esp32 --target upload        # flashen (SimHub vorher schließen)
 ```
 
+## Pin-Belegung (physisch getestet und final)
+
+| GPIO | Funktion | Windows Gamepad Button |
+|------|----------|------------------------|
+| 12 | Encoder 1 CLK (A) | — |
+| 13 | Encoder 1 DT (B) | — |
+| 14 | **Shift UP Wippe** (KEIN EC11-Button!) | Button 1 |
+| 15 | **Shift DOWN Wippe** (KEIN EC11-Button!) | Button 2 |
+| 4 | Encoder 2 CLK (A) | — |
+| 5 | Encoder 2 DT (B) | — |
+| 17 | PL9823 LEDs Data (10 LEDs) | — |
+| 33 | TFT DC | — |
+| 34 | TFT CS | — |
+| 35 | TFT MOSI | — |
+| 36 | TFT SCK | — |
+| 38 | TFT RST | — |
+| 39–42 | Button-Matrix Spalten (Col1–4) | — |
+| 43–45 | Button-Matrix Zeilen (Row1–3) | — |
+
+**Button-Matrix Nummerierung** (`rowIndex * colCount + colIndex + 1`):
+- Matrix-Button 3 = EC11 Encoder 1 SW → **Windows Button 5**
+- Matrix-Button 4 = EC11 Encoder 2 SW → **Windows Button 6**
+- Die EC11 SW-Pins sind in die Button-Matrix eingeschleift (NICHT direkt an GPIO)
+
+**Kommentar-Warnung:** Der Kommentar im Code `GPIO 14 - Button (SW) [Encoder 1]` ist **falsch**. GPIO 14/15 sind Shift-Wippen, keine EC11-Buttons.
+
+## Layout-Umschaltung
+
+- `switchLayout()` ist **public** in `SHCustomProtocol` — wird aus `main.cpp` aufgerufen
+- Auslöser: EC11-Button-Presse → `buttonMatrixStatusChanged` in `main.cpp` (buttonId 3 oder 4, Status=1)
+- `switchLayout()` ruft intern `enterDash()` auf — das ist zwingend nötig, um alle Feld-Caches zurückzusetzen (`prevRpm`, `fGear` etc.), sonst werden Felder nach dem Layout-Wechsel nicht neu gezeichnet
+- **Niemals** in `switchLayout()` nur `fillScreen` + `drawChrome()` aufrufen ohne `enterDash()` — Felder bleiben dann leer
+
 ## Häufige Fehler (nicht wiederholen)
 
 | Fehler | Ursache | Fix |
