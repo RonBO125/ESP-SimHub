@@ -167,11 +167,12 @@ SimHub sendet Telemetrie via Custom Protocol (serielle Pipe), der ESP rendert se
 - LGFX-Klasse ist direkt in `SHCustomProtocol.h` eingebettet (kein separates Include). `lgfx_user/LGFX_ESP32_sample.hpp` **niemals einbinden** — enthält `VSPI_HOST` (auf ESP32-S2 nicht vorhanden → Compile-Fehler)
 
 ### Logischer Canvas
+
 - **W=240, H=320** — Portrait, entspricht setRotation(0) auf ST7789 mit panel 240×320
 
 ### Layout (Portrait 240×320)
 
-#### Layout 0 - Standard (Default)
+#### Layout 1 - Standard (Default)
 | Y   | H  | Inhalt                                         |
 |-----|----|------------------------------------------------|
 | 0   | 18 | RPM-Balken (grün→orange→rot)                   |
@@ -180,38 +181,83 @@ SimHub sendet Telemetrie via Custom Protocol (serielle Pipe), der ESP rendert se
 | 146 | 30 | Beste Rundenzeit (Label linksbündig + Zahl, rechtsbündig) |
 | 177 | 28 | Delta (Label linksbündig + Zahl, zentriert)    |
 | 206 | 34 | TC \| ABS \| BB (bright wenn aktiv)            |
-| 240 | 80 | **Reifentemperaturen (FL/FR obere Reihe, RL/RR untere Reihe, 2×2 Grid)** |
 
-#### Layout 1 - Rennmodus (Performance)
-| Y   | H  | Inhalt                                         |
-|-----|----|------------------------------------------------|
-| 0   | 36 | RPM-Balken (grün→orange→rot, doppelte Höhe)    |
-| 37  | 80 | Speed (sehr groß, Font 7) \| Gang (Font 4)     |
-| 118 | 50 | Aktuelle Rundenzeit (weiß / rot bei ungültig)   |
-| 169 | 50 | Beste Rundenzeit (cyan)                         |
-| 220 | 32 | Delta (sehr groß, Font 4)                       |
-| 253 | 37 | TC \| ABS \| BB (reduzierte Größe)              |
+#### Layout 2 - Rennmodus (Performance)
+| Y   | H  | Inhalt                                                         |
+|-----|----|-----------------------------------------------------------------|
+| 0   | 36 | RPM-Balken (grün→orange→rot, doppelte Höhe)                    |
+| 37  | 80 | Gang rechts (Font 4, x=180) \| Speed links (Font 6, x=60)     |
+| 118 | 50 | Aktuelle Rundenzeit (weiß / rot bei ungültig)                  |
+| 169 | 50 | Beste Rundenzeit (cyan)                                        |
+| 220 | 32 | Delta (Font 4)                                                 |
+| 253 | 37 | TC \| ABS \| BB                                                |
 
-#### Layout 2 - Minimalistisch (Speed-Fokus)
-| Y   | H  | Inhalt                                         |
-|-----|----|------------------------------------------------|
-| 0   | 18 | RPM-Balken (grün→orange→rot)                   |
-| 19  | 140| **Gang (riesig, Font 7)** \| Speed (Font 3)    |
-| 160 | 50 | Aktuelle Rundenzeit (weiß / rot bei ungültig)   |
-| 211 | 48 | Delta (groß, Font 4)                           |
-| 260 | 20 | TC \| ABS (nur Symbole, keine Werte)            |
+#### Layout 3 - Grid (Gear-Fokus)
+| Y   | H   | Inhalt                                                                      |
+|-----|-----|-----------------------------------------------------------------------------|
+| 0   | 18  | RPM-Balken (grün→orange→rot)                                                |
+| 19  | 208 | 3-Spalten-Raster (4 Zeilen à 52px): Links FL/TC/BB/RL — Mitte Gear — Rechts FR/ABS/RR |
+| 228 | 30  | Aktuelle Rundenzeit (weiß / rot bei ungültig)                               |
+| 259 | 30  | Delta (grün / rot)                                                          |
+| 290 | 30  | Beste Rundenzeit (cyan)                                                     |
+
+### Layout-Skizzen
+
+#### Layout 1 - Standard
+```
+Y=0   H=18    RPM-Balken (grün→orange→rot)
+Y=19  H=152   Hauptbereich:
+        | Links: Gang (gelb, Font 4) bei Y=43
+        | Rechts: Speed (grün, Font 6) bei Y=87 + "km/h" bei Y=139
+Y=172 H=32    Aktuelle Rundenzeit (weiß/rot bei ungültig)
+Y=205 H=32    Delta (grün für positiv, rot für negativ)
+Y=238 H=32    Beste Rundenzeit (cyan)
+Y=271 H=39    Assist-Systeme (TC | ABS | BB) [Drittelbreite]
+```
+
+#### Layout 2 - Rennmodus
+```
+Y=0   H=36    RPM-Balken (grün→orange→rot, doppelte Höhe)
+Y=37  H=80    Gang (gelb, Font 4, x=180) rechts | Speed (grün, Font 6, x=60) links
+               speedY=MAIN_Y+8=45, kmhY=MAIN_Y+MAIN_H-22=95
+Y=118 H=50    Aktuelle Rundenzeit (weiß/rot bei ungültig)
+Y=169 H=50    Beste Rundenzeit (cyan)
+Y=220 H=32    Delta (Font 4)
+Y=253 H=37    Assist-Systeme TC|ABS|BB
+```
+
+#### Layout 3 - Grid
+```
+Y=0   H=18    RPM-Balken (grün→orange→rot)
+Y=19  H=208   3-Spalten-Raster, 4 Zeilen à 52px (LAYOUT3_ROW_H):
+               Spalte links (x=0–79, cx=40):  FL | TC | BB | RL
+               Spalte Mitte (x=80–159, cx=120): Gear (Font 4×Size4, gearY=GRID_Y+65=84)
+               Spalte rechts (x=160–239, cx=200): FR | ABS | (leer) | RR
+               Zellen: Label font2 bei y0+4, Wert font3 bei y0+24
+Y=228 H=30    Aktuelle Rundenzeit (weiß/rot bei ungültig)
+Y=259 H=30    Delta
+Y=290 H=30    Beste Rundenzeit (cyan)
+```
+
+**Hinweise:**
+- Alle Y-Positionen beziehen sich auf die obere Kante des Bereichs
+- "km/h" wird immer mit Font 2 angezeigt
+- Trennlinien werden automatisch zwischen allen Bereichen gezeichnet
 
 ### Bildschirmmodi
+
 - **LOGO-Modus:** Lamborghini-Logo (gold auf schwarz) — beim Start und nach 5 Min. ohne Daten
 - **DASH-Modus:** vollständiges Dashboard — sobald erstes SimHub-Paket eintrifft
 - Timeout-Konstante: `300000UL` ms in `loop()`
 
 ### Logo-Bitmap
+
 - Datei: `src/logo.h` — 1bpp PROGMEM-Array, MSB-first, 30 Bytes/Zeile × 320 Zeilen = 9600 Bytes
 - Generieren: `python tools/convert_logo.py tools/lamborghini.png` (Standard: 240×320)
 - Benötigt: `pip install Pillow`
 
 ### Farben
+
 | Konstante | Wert      | Farbe                                        |
 |-----------|-----------|----------------------------------------------|
 | C_BG      | TFT_BLACK | Hintergrund                                  |
@@ -220,6 +266,7 @@ SimHub sendet Telemetrie via Custom Protocol (serielle Pipe), der ESP rendert se
 | C_GOLD    | 0xFFD700  | Logo-Gold — **RGB888**, nicht TFT_GOLD (RGB565 → erscheint mintgrün in drawBitmap) |
 
 ### Häufige Fehler
+
 | Fehler | Ursache | Fix |
 |--------|---------|-----|
 | Bild versetzt (x≈60, y≈240) | Panel_ILI9341 statt ST7789 | `lgfx::Panel_ST7789` verwenden |
@@ -234,11 +281,13 @@ SimHub sendet Telemetrie via Custom Protocol (serielle Pipe), der ESP rendert se
 `switchLayout()` ist **public** in `SHCustomProtocol` und wird aus `main.cpp` aufgerufen.
 
 ### Auslöser
+
 - EC11 Encoder 1 SW → Matrix-Button 3 → `buttonMatrixStatusChanged(3, 1)` → `shCustomProtocol.switchLayout()`
 - EC11 Encoder 2 SW → Matrix-Button 4 → `buttonMatrixStatusChanged(4, 1)` → `shCustomProtocol.switchLayout()`
 - Beide EC11-Druckknöpfe schalten durch; der Gangschalter (GPIO 14/15) ist **nicht** beteiligt
 
 ### Kritische Implementierungsregel
+
 `switchLayout()` **muss** intern `enterDash()` aufrufen — nicht nur `fillScreen()` + `drawChrome()`.
 
 **Grund:** `enterDash()` setzt alle Feld-Caches zurück (`prevRpm = -1`, `strcpy(f.prev, "*")` für alle Felder). Ohne diesen Reset glauben `drawGear()`, `drawSpeed()` etc., dass sich nichts geändert hat, und zeichnen den neuen Layout-Inhalt **nicht**. Das Display zeigt dann nach dem Wechsel nur leere Chrome-Linien.
@@ -257,6 +306,7 @@ void switchLayout() {
 ```
 
 ### Persistenz
+
 Layout wird via `Preferences`-API in NVS gespeichert (`namespace "display"`, key `"layout"`).
 NVS-Schreibvorgänge können ~5–20 ms dauern — kein `delay()` drumherum nötig.
 
@@ -265,15 +315,18 @@ NVS-Schreibvorgänge können ~5–20 ms dauern — kein `delay()` drumherum nöt
 ## Flash / Upload (kein Boot-Button nötig)
 
 ### Voraussetzung
+
 SimHub muss beim Flashen **geschlossen** sein (blockiert sonst den COM-Port).
 
 ### Ablauf (automatisch via `upload_reset.py`)
+
 1. Script erkennt ESP32 automatisch über Espressif VID `0x303A` — unabhängig von der COM-Nummer
 2. Sendet 1200bps Touch → ESP32 resettet in Bootloader
 3. Wartet bis COM-Port wieder verfügbar (Bootloader = gleicher Port)
 4. Ruft esptool direkt auf
 
 ### Konfiguration in `platformio.ini`
+
 ```ini
 upload_protocol = custom
 upload_port = COM8          ; Fallback — Script erkennt Port automatisch
@@ -281,6 +334,7 @@ extra_scripts = post:upload_reset.py
 ```
 
 ### COM-Ports (können sich nach Neustart ändern)
+
 | Port | Gerät                  |
 |------|------------------------|
 | COM8 | ESP32-S2 (TinyUSB CDC, VID 0x303A) — App + Bootloader |
@@ -288,7 +342,8 @@ extra_scripts = post:upload_reset.py
 | COM3 | SimHub Controller Remapper Bridge |
 
 ### esptool-Pfad
-`~/.platformio/packages/tool-esptoolpy/esptool.py`  
+
+`~/.platformio/packages/tool-esptoolpy/esptool.py`
 **Nicht** `python -m esptool` — Modul nicht im PlatformIO venv.
 
 ---
@@ -314,3 +369,11 @@ extra_scripts = post:upload_reset.py
 | 2026-06-29 | `switchLayout()` public in SHCustomProtocol — aufgerufen aus `buttonMatrixStatusChanged` in main.cpp |
 | 2026-06-29 | Layout-Umschaltung via EC11-Taster (Matrix-Button 3 oder 4, Windows Button 5/6) — nicht via GPIO14 (Shift-Wippe) |
 | 2026-06-29 | Fix: `switchLayout()` ruft `enterDash()` auf (nicht nur `fillScreen`+`drawChrome`) — zwingend für Cache-Invalidierung |
+| 2026-07-01 | Fix Layout 2+3: Speed-x-Position war `W*3/4` (selbe Spalte wie Gear) → jetzt `W/4` (linke Hälfte) |
+| 2026-07-01 | Fix Layout 2: `speedY=RPM_Y+16=16` lag im RPM-Balken → jetzt `MAIN_Y+8=45`, `kmhY=MAIN_Y+MAIN_H-22=95` |
+| 2026-07-01 | Fix: Best Lap wurde in Layout 3 bei y=2 gezeichnet (BLAP_Y=-1) → Guard `if (BLAP_Y >= 0)` |
+| 2026-07-01 | Layout 3 komplett neu: 3-Spalten-Raster (FL/TC/BB/RL links, Gear Mitte, FR/ABS/RR rechts) + CurLap/Delta/BestLap unten |
+| 2026-07-01 | Neue Field-Variablen `fTFL/fTFR/fTRL/fTRR` für Reifentemperaturen in Layout 3 Grid |
+| 2026-07-01 | `drawGrid3()` — neue Funktion für Layout 3 (ersetzt `drawAssist()` in loop) |
+| 2026-07-01 | `drawChrome()` — Early-Return für Layout 3 mit eigener Gitter-Chrome-Logik |
+| 2026-07-01 | Doku + CLAUDE.md aktualisiert: Layout 3 Grid-Struktur, neue Häufige-Fehler-Einträge |

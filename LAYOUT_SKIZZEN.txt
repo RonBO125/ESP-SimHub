@@ -1,0 +1,46 @@
+LAYOUT-SKIZZEN FÜR ESP-SIMHUB GT WHEEL DISPLAY (240×320 Pixel)
+
+================================================================================
+
+LAYOUT 1 - STANDARD (Balance zwischen allen Werten)
+---------------------------------------------------
+Y=0   H=18    RPM-Balken (grün→orange→rot) [Vollbreite]
+Y=19  H=152   Hauptbereich:
+        | Links: Gang (gelb, Font 4) bei Y=43
+        | Rechts: Speed (grün, Font 6) bei Y=87 + "km/h" bei Y=139
+Y=172 H=32    Aktuelle Rundenzeit (weiß/rot bei ungültig)
+Y=205 H=32    Delta (grün für positiv, rot für negativ)
+Y=238 H=32    Beste Rundenzeit (cyan)
+Y=271 H=39    Assist-Systeme (TC | ABS | BB) [Drittelbreite]
+
+================================================================================
+
+LAYOUT 2 - RENNMODUS (Fokus auf aktuelle Leistung)
+-------------------------------------------------
+Y=0   H=36    RPM-Balken (grün→orange→rot, doppelte Höhe)
+Y=37  H=80    Gang (gelb, Font 4) bei Y=72
+        Speed (grün, Font 6) bei Y=16 + "km/h" bei Y=18
+Y=118 H=50    Aktuelle Rundenzeit (weiß/rot bei ungültig)
+Y=169 H=50    Beste Rundenzeit (cyan)
+Y=220 H=32    Delta (sehr groß, Font 4)
+Y=253 H=37    Assist-Systeme (reduzierte Größe)
+
+================================================================================
+
+LAYOUT 3 - MINIMALISTISCH (Speed-Fokus)
+----------------------------------------
+Y=0   H=18    RPM-Balken (grün→orange→rot)
+Y=19  H=140   Gang (riesig, Font 7) bei Y=60
+        Speed (Font 3) bei Y=16 + "km/h" bei Y=122
+Y=160 H=50    Aktuelle Rundenzeit (weiß/rot bei ungültig)
+Y=211 H=48    Delta (groß, Font 4)
+Y=260 H=20    Assist-Systeme (nur Symbole, keine Werte)
+
+================================================================================
+
+HINWEISE:
+- Alle Y-Positionen beziehen sich auf die obere Kante des Bereichs
+- "km/h" wird immer mit Font 2 angezeigt
+- Trennlinien werden automatisch zwischen allen Bereichen gezeichnet
+- Beschriftungen (Labels) werden in drawChrome() bei Bedarf hinzugefügt
+- Layout-Umschaltung erfolgt via EC11-Taster (Matrix-Button 3 oder 4)

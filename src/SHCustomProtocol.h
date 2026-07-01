@@ -77,30 +77,31 @@ static const int LAYOUT1_ASST_Y   = 271, LAYOUT1_ASST_H   = 39;
 
     // Layout 2 (Rennmodus) - Fokus auf aktuelle Leistung
     // Größere Speed/RPM-Anzeige, mehr Platz für Rundenzeiten
-    static const int LAYOUT2_SPEED_RPM_Y = 0,   LAYOUT2_SPEED_RPM_H = 60;
-    static const int LAYOUT2_GEAR_Y     = 61,  LAYOUT2_GEAR_H     = 40;
-    static const int LAYOUT2_CLAP_Y     = 102, LAYOUT2_CLAP_H     = 50;
-    static const int LAYOUT2_BLAP_Y     = 153, LAYOUT2_BLAP_H     = 50;
-    static const int LAYOUT2_DELT_ASST_Y= 204, LAYOUT2_DELT_ASST_H= 96;
+    static const int LAYOUT2_RPM_Y      = 0,   LAYOUT2_RPM_H      = 36;
+    static const int LAYOUT2_GEAR_SPEED_Y = 37, LAYOUT2_GEAR_SPEED_H = 80;
+    static const int LAYOUT2_CLAP_Y     = 118, LAYOUT2_CLAP_H     = 50;
+    static const int LAYOUT2_BLAP_Y     = 169, LAYOUT2_BLAP_H     = 50;
+    static const int LAYOUT2_DELT_Y     = 220, LAYOUT2_DELT_H     = 32;
+    static const int LAYOUT2_ASST_Y     = 253, LAYOUT2_ASST_H     = 37;
 
-    // Layout 3 (Minimalistisch) - Nur die wichtigsten Infos
-    // Sehr großer Gang-Anzeige, reduzierte Assist-Systeme
-    static const int LAYOUT3_GEAR_Y    = 0,   LAYOUT3_GEAR_H    = 80;
-    static const int LAYOUT3_SPEED_Y   = 81,  LAYOUT3_SPEED_H   = 40;
-    static const int LAYOUT3_CLAP_Y    = 122, LAYOUT3_CLAP_H    = 50;
-    static const int LAYOUT3_BLAP_Y    = 173, LAYOUT3_BLAP_H    = 60;
-    static const int LAYOUT3_DELT_Y    = 234, LAYOUT3_DELT_H    = 36;
-    static const int LAYOUT3_ASST_Y    = 234, LAYOUT3_ASST_H    = 36;
+    // Layout 3 (Grid) - Raster: Gear groß mittig, FL/TC/BB/RL links, FR/ABS/RR rechts
+    //   darunter CurLap, Delta, BestLap
+    static const int LAYOUT3_RPM_Y  = 0,   LAYOUT3_RPM_H  = 18;
+    static const int LAYOUT3_GRID_Y = 19,  LAYOUT3_GRID_H = 208; // 4 Zeilen à 52 px
+    static const int LAYOUT3_ROW_H  = 52;
+    static const int LAYOUT3_CLAP_Y = 228, LAYOUT3_CLAP_H = 30;
+    static const int LAYOUT3_DELT_Y = 259, LAYOUT3_DELT_H = 30;
+    static const int LAYOUT3_BLAP_Y = 290, LAYOUT3_BLAP_H = 30;
 
     // Layout-spezifische Konstanten für einfache Zugriffe
     #define RPM_Y   (currentLayout == 0 ? LAYOUT1_RPM_Y : \
-                    currentLayout == 1 ? LAYOUT2_SPEED_RPM_Y : LAYOUT3_SPEED_Y)
+                    currentLayout == 1 ? LAYOUT2_RPM_Y : LAYOUT3_RPM_Y)
     #define RPM_H   (currentLayout == 0 ? LAYOUT1_RPM_H : \
-                    currentLayout == 1 ? LAYOUT2_SPEED_RPM_H : LAYOUT3_SPEED_H)
+                    currentLayout == 1 ? LAYOUT2_RPM_H : LAYOUT3_RPM_H)
     #define MAIN_Y  (currentLayout == 0 ? LAYOUT1_MAIN_Y : \
-                    currentLayout == 1 ? LAYOUT2_GEAR_Y : LAYOUT3_GEAR_Y)
+                    currentLayout == 1 ? LAYOUT2_GEAR_SPEED_Y : LAYOUT3_GRID_Y)
     #define MAIN_H  (currentLayout == 0 ? LAYOUT1_MAIN_H : \
-                    currentLayout == 1 ? LAYOUT2_GEAR_H : LAYOUT3_GEAR_H)
+                    currentLayout == 1 ? LAYOUT2_GEAR_SPEED_H : LAYOUT3_GRID_H)
     #define CLAP_Y  (currentLayout == 0 ? LAYOUT1_CLAP_Y : \
                     currentLayout == 1 ? LAYOUT2_CLAP_Y : LAYOUT3_CLAP_Y)
     #define CLAP_H  (currentLayout == 0 ? LAYOUT1_CLAP_H : \
@@ -110,13 +111,13 @@ static const int LAYOUT1_ASST_Y   = 271, LAYOUT1_ASST_H   = 39;
     #define BLAP_H  (currentLayout == 0 ? LAYOUT1_BLAP_H : \
                     currentLayout == 1 ? LAYOUT2_BLAP_H : LAYOUT3_BLAP_H)
     #define DELT_Y  (currentLayout == 0 ? LAYOUT1_DELT_Y : \
-                    currentLayout == 1 ? LAYOUT2_DELT_ASST_Y : LAYOUT3_DELT_Y)
+                    currentLayout == 1 ? LAYOUT2_DELT_Y : LAYOUT3_DELT_Y)
     #define DELT_H  (currentLayout == 0 ? LAYOUT1_DELT_H : \
-                    currentLayout == 1 ? LAYOUT2_DELT_ASST_H : LAYOUT3_DELT_H)
+                    currentLayout == 1 ? LAYOUT2_DELT_H : LAYOUT3_DELT_H)
     #define ASST_Y  (currentLayout == 0 ? LAYOUT1_ASST_Y : \
-                    currentLayout == 1 ? LAYOUT2_DELT_ASST_Y : LAYOUT3_ASST_Y)
+                    currentLayout == 1 ? LAYOUT2_ASST_Y : -1)
     #define ASST_H  (currentLayout == 0 ? LAYOUT1_ASST_H : \
-                    currentLayout == 1 ? LAYOUT2_DELT_ASST_H : LAYOUT3_ASST_H)
+                    currentLayout == 1 ? LAYOUT2_ASST_H : 0)
 
     // Aktuelle Layout-Auswahl (0=Layout1, 1=Layout2, 2=Layout3)
     static uint8_t currentLayout = 0;
@@ -139,6 +140,10 @@ static Field fDelt  = {"*", 0};
 static Field fTC    = {"*", 0};
 static Field fABS   = {"*", 0};
 static Field fBB    = {"*", 0};
+static Field fTFL   = {"*", 0};  // Reifentemps für Layout 3 Grid
+static Field fTFR   = {"*", 0};
+static Field fTRL   = {"*", 0};
+static Field fTRR   = {"*", 0};
 
 static bool fieldChanged(Field& f, const String& v, int32_t c) {
     if (strcmp(f.prev, v.c_str()) == 0 && f.prevColor == c) return false;
@@ -248,67 +253,56 @@ private:
     void drawChrome() {
         tft.drawFastHLine(0, RPM_Y + RPM_H, W, C_DIV);
 
-        // Layout-spezifische Trennlinien
-        if (currentLayout == 0 || currentLayout == 1) { // Layout 1 und 2 haben separate CLAP/BLAP
-            tft.drawFastHLine(0, CLAP_Y - 1, W, C_DIV);
-            tft.drawFastHLine(0, BLAP_Y - 1, W, C_DIV);
+        if (currentLayout == 2) {
+            // Layout 3: 3-Spalten-Raster (W/3=80px) mit 4 Zeilen (LAYOUT3_ROW_H=52px)
+            // Vertikale Gitter-Linien
+             tft.drawFastVLine(60,         LAYOUT3_GRID_Y, LAYOUT3_GRID_H, C_DIV);
+             tft.drawFastVLine(180,        LAYOUT3_GRID_Y, LAYOUT3_GRID_H, C_DIV);
+            // Horizontale Zeilen-Trennlinien
+            for (int r = 1; r < 4; r++)
+                tft.drawFastHLine(0, LAYOUT3_GRID_Y + r * LAYOUT3_ROW_H, W, C_DIV);
+            // Abschnitte unten
+            tft.drawFastHLine(0, LAYOUT3_CLAP_Y - 1, W, C_DIV);
+            tft.drawFastHLine(0, LAYOUT3_DELT_Y - 1, W, C_DIV);
+            tft.drawFastHLine(0, LAYOUT3_BLAP_Y - 1, W, C_DIV);
+            // Gitter-Labels (obere Kante jeder Zelle)
+            tft.setTextColor(C_LABEL, C_BG);
+            tft.drawString("FL",  4,             LAYOUT3_GRID_Y + 0 * LAYOUT3_ROW_H + 4, 2);
+            tft.drawString("FR",  W * 2 / 3 + 4, LAYOUT3_GRID_Y + 0 * LAYOUT3_ROW_H + 4, 2);
+            tft.drawString("TC",  4,             LAYOUT3_GRID_Y + 1 * LAYOUT3_ROW_H + 4, 2);
+            tft.drawString("ABS", W * 2 / 3 + 4, LAYOUT3_GRID_Y + 1 * LAYOUT3_ROW_H + 4, 2);
+            tft.drawString("BB",  4,             LAYOUT3_GRID_Y + 2 * LAYOUT3_ROW_H + 4, 2);
+            tft.drawString("RL",  4,             LAYOUT3_GRID_Y + 3 * LAYOUT3_ROW_H + 4, 2);
+            tft.drawString("RR",  W * 2 / 3 + 4, LAYOUT3_GRID_Y + 3 * LAYOUT3_ROW_H + 4, 2);
+            // Untere Abschnitts-Labels
+            tft.drawString("CUR LAP",  4, LAYOUT3_CLAP_Y + 3, 2);
+            tft.drawString("DELTA",    4, LAYOUT3_DELT_Y + 3, 2);
+            tft.drawString("BEST LAP", 4, LAYOUT3_BLAP_Y + 3, 2);
+            return;
         }
 
-        if (currentLayout == 0 || currentLayout == 2) { // Layout 1 und 3 haben separate DELT/ASST
-            tft.drawFastHLine(0, DELT_Y - 1, W, C_DIV);
-        }
-
+        // Layout 0 und 1: Trennlinien
+        tft.drawFastHLine(0, CLAP_Y - 1, W, C_DIV);
+        tft.drawFastHLine(0, BLAP_Y - 1, W, C_DIV);
+        tft.drawFastHLine(0, DELT_Y - 1, W, C_DIV);
         tft.drawFastHLine(0, ASST_Y - 1, W, C_DIV);
 
-        // Layout-spezifische vertikale Linien
-        if (currentLayout == 0 || currentLayout == 2) { // Layout 1 und 3 haben mittlere Trennlinie für Speed/Gear
+        // Vertikale Linie Gear/Speed nur in Layout 1
+        if (currentLayout == 0)
             tft.drawFastVLine(W / 2, MAIN_Y, MAIN_H, C_DIV);
-        }
 
-        // Assist-System-Trennlinien (nur in Layout 1 und 2)
-        if (currentLayout == 0 || currentLayout == 1) {
-            tft.drawFastVLine(W / 3, ASST_Y, ASST_H, C_DIV);
-            tft.drawFastVLine(W * 2 / 3, ASST_Y, ASST_H, C_DIV);
-        }
+        // Assist-Trennlinien (Layouts 0 und 1)
+        tft.drawFastVLine(W / 3,     ASST_Y, ASST_H, C_DIV);
+        tft.drawFastVLine(W * 2 / 3, ASST_Y, ASST_H, C_DIV);
 
-        // Tyre Temperature-Trennlinien (nur in Layout 1)
-        // if (currentLayout == 0) {
-        //     tft.drawFastHLine(0, LAYOUT1_TYRES_Y - 1, W, C_DIV);
-        //     tft.drawFastVLine(W / 4, LAYOUT1_TYRES_Y, LAYOUT1_TYRES_H, C_DIV);
-        //     tft.drawFastVLine(W * 2 / 4, LAYOUT1_TYRES_Y, LAYOUT1_TYRES_H, C_DIV);
-        //     tft.drawFastVLine(W * 3 / 4, LAYOUT1_TYRES_Y, LAYOUT1_TYRES_H, C_DIV);
-        // }
-
-        // Layout-spezifische Beschriftungen
-        if (currentLayout == 0 || currentLayout == 1) { // Layout 1 und 2 haben separate CLAP/BLAP
-            tft.setTextColor(C_LABEL, C_BG);
-            tft.drawString("CUR LAP", 4, CLAP_Y + 3, 2);
-            tft.drawString("BEST LAP", 4, BLAP_Y + 3, 2);
-        }
-
-        if (currentLayout == 0 || currentLayout == 1) { // Layout 1 und 2 haben separate Delta
-            tft.setTextColor(C_LABEL, C_BG);
-            tft.drawString("DELTA", 4, DELT_Y + 3, 2);
-        }
-
-        if (currentLayout == 0 || currentLayout == 1) { // Layout 1 und 2 haben separate Assist-Systeme
-            tft.setTextColor(C_LABEL, C_BG);
-            // tft.drawCentreString("TC", W / 6, ASST_Y + 5, 2);
-            // tft.drawCentreString("ABS", W / 2, ASST_Y + 5, 2);
-            // tft.drawCentreString("BB", W * 5/6, ASST_Y + 5, 2);
-        tft.drawCentreString("TC",      W / 6,   ASST_Y + 5, 2);
-        tft.drawCentreString("ABS",     W / 2,   ASST_Y + 5, 2);
-        tft.drawCentreString("BB",      W * 5/6, ASST_Y + 5, 2);            
-        }
-
-        // Tyre Temperature-Beschriftungen (nur in Layout 1)
-        // if (currentLayout == 0) {
-        //     tft.setTextColor(C_LABEL, C_BG);
-        //     tft.drawCentreString("FL", W / 8, LAYOUT1_TYRES_Y + 5, 2);
-        //     tft.drawCentreString("FR", W * 3/8, LAYOUT1_TYRES_Y + 5, 2);
-        //     tft.drawCentreString("RL", W * 5/8, LAYOUT1_TYRES_Y + 5, 2);
-        //     tft.drawCentreString("RR", W * 7/8, LAYOUT1_TYRES_Y + 5, 2);
-        // }
+        // Labels
+        tft.setTextColor(C_LABEL, C_BG);
+        tft.drawString("CUR LAP",  4, CLAP_Y + 3, 2);
+        tft.drawString("DELTA",    4, DELT_Y + 3, 2);
+        tft.drawString("BEST LAP", 4, BLAP_Y + 3, 2);
+        tft.drawCentreString("TC",  W / 6,   ASST_Y + 5, 2);
+        tft.drawCentreString("ABS", W / 2,   ASST_Y + 5, 2);
+        tft.drawCentreString("BB",  W * 5/6, ASST_Y + 5, 2);
     }
 
     // ── Mode transitions ─────────────────────────────────────────
@@ -320,6 +314,7 @@ private:
         auto rst = [](Field& f) { strcpy(f.prev, "*"); f.prevColor = 0; };
         rst(fGear); rst(fSpd); rst(fCLap); rst(fBLap);
         rst(fDelt); rst(fTC);  rst(fABS);  rst(fBB);
+        rst(fTFL);  rst(fTFR); rst(fTRL);  rst(fTRR);
     }
 
     // Lädt das gespeicherte Layout beim Start
@@ -364,37 +359,83 @@ private:
     // ── Gear ─────────────────────────────────────────────────────
     void drawGear() {
         if (!fieldChanged(fGear, gear, TFT_YELLOW)) return;
-        tft.fillRect(1, MAIN_Y + 1, W / 2 - 2, MAIN_H - 2, C_BG);
+
         tft.setTextSize(4);
         tft.setTextColor(TFT_YELLOW, C_BG);
-        int gearY = (currentLayout == 0) ? MAIN_Y + 24 : MAIN_Y + 12;
-        tft.drawCentreString(gear, W / 4, gearY, 4);
+
+        // Gang-Position (layout-spezifisch)
+        int gearY;
+        int gearX;
+        if (currentLayout == 0) {
+            // Layout 1: links im Hauptbereich
+            gearY = MAIN_Y + 24;  // Mitte des Hauptbereichs
+            gearX = W / 4;
+            tft.fillRect(1, MAIN_Y + 1, W / 2 - 2, MAIN_H - 2, C_BG);
+        } else if (currentLayout == 1) {
+            // Layout 2: oben im Gang-Bereich
+            gearY = MAIN_Y + 35;  // oben im Gang-Bereich
+            gearX = W * 3 / 4;
+            tft.fillRect(W / 2 + 1, MAIN_Y + 1, W / 2 - 2, MAIN_H - 2, C_BG);
+        } else {  // Layout 3: Gear in mittlerer Spalte (x=W/3..W*2/3), vertikal zentriert
+            gearY = LAYOUT3_GRID_Y + 65;
+            gearX = W / 2;  // Mitte der mittleren Spalte (x=120)
+            tft.fillRect(W / 3 + 1, LAYOUT3_GRID_Y + 1, W / 3 - 2, LAYOUT3_GRID_H - 2, C_BG);
+        }
+
+        tft.drawCentreString(gear, gearX, gearY, 4);
         tft.setTextSize(1);
-        tft.drawFastVLine(W / 2, MAIN_Y, MAIN_H, C_DIV);
+
+        // Vertikale Trennlinie nur in Layout 1 (Layout 3 hat Gitter aus drawChrome)
+        if (currentLayout == 0) {
+            tft.drawFastVLine(W / 2, MAIN_Y, MAIN_H, C_DIV);
+        }
     }
 
     // ── Speed ────────────────────────────────────────────────────
     void drawSpeed() {
+        if (currentLayout == 2) return;  // Layout 3 zeigt keine Speed-Anzeige
+
         String s = String(speed);
 
         // Erst auf Änderung prüfen (ohne fSpd.prev zu modifizieren)
         if (strcmp(fSpd.prev, s.c_str()) == 0 && fSpd.prevColor == TFT_GREEN) return;
 
-        // Bounding-box der geänderten Zeichen MITTELS des ALTEN fSpd.prev finden
-        int speedY = (currentLayout == 0) ? MAIN_Y + 42 : MAIN_Y + 16;
-        CharBox box = findChangedBox(fSpd.prev, s, W * 3 / 4, speedY + 48, 6, false, true);
+        tft.setTextColor(TFT_GREEN, C_BG);
+
+        // Layout-spezifische Positionierung
+        // Layout 1: Speed rechts (x=W*3/4), Gear links
+        // Layout 2+3: Speed links (x=W/4), Gear rechts — kein Überlappen
+        int speedX, speedY, kmhY;
+        if (currentLayout == 0) {
+            speedX = W * 3 / 4;
+            speedY = MAIN_Y + 42;
+            kmhY   = MAIN_Y + 94;
+            tft.fillRect(W / 2 + 1, MAIN_Y + 1, W / 2 - 2, MAIN_H - 2, C_BG);
+        } else if (currentLayout == 1) {
+            // Layout 2: linke Hälfte, innerhalb MAIN (y=37–117, H=80)
+            speedX = W / 4;
+            speedY = MAIN_Y + 8;            // Font-6-Text (~48px) → y=45–93, bleibt in MAIN
+            kmhY   = MAIN_Y + MAIN_H - 22; // "km/h" direkt unter Zahl → y=95–111
+            tft.fillRect(1, MAIN_Y + 1, W / 2 - 2, MAIN_H - 2, C_BG);
+        } else {
+            // Layout 3: linke Hälfte, innerhalb MAIN (y=19–159, H=140)
+            speedX = W / 4;
+            speedY = MAIN_Y + 16;
+            kmhY   = MAIN_Y + MAIN_H - 18;
+            tft.fillRect(1, MAIN_Y + 1, W / 2 - 2, MAIN_H - 2, C_BG);
+        }
+
+        CharBox box = findChangedBox(fSpd.prev, s, speedX, speedY + 48, 6, false, true);
 
         // Nur geänderten Bereich löschen
         if (box.w > 0 && box.h > 0) {
             tft.fillRect(box.x, box.y, box.w, box.h, C_BG);
         }
 
-        // Kompletten Text neu zeichnen, Speed + km/h als Gruppe zentriert
-        tft.setTextColor(TFT_GREEN, C_BG);
-        tft.drawCentreString(s, W * 3 / 4, speedY, 6);
+        tft.drawCentreString(s, speedX, speedY, 6);
+
         tft.setTextColor(C_LABEL, C_BG);
-        int kmhY = (currentLayout == 0) ? MAIN_Y + 94 : MAIN_Y + MAIN_H - 18;
-        tft.drawCentreString("km/h", W * 3 / 4, kmhY, 2);
+        tft.drawCentreString("km/h", speedX, kmhY, 2);
 
         // fSpd.prev auf neuen Wert setzen
         strncpy(fSpd.prev, s.c_str(), 31);
@@ -465,6 +506,72 @@ private:
         tft.fillRect(x0, ASST_Y + 20, W / 3 - 2, 30, C_BG);
         tft.setTextColor(col, C_BG);
         tft.drawCentreString(val, cx, yPos, fontSize);
+    }
+
+    // ── Layout 3 Grid: Reifentemps + Assists in Zellen ──────────
+    // Spalte 0 (links): cx=W/6=40   Spalte 2 (rechts): cx=W*5/6=200
+    // Pro Zelle: Label (font2) bei y0+4, Wert (font3) bei y0+24
+    void drawGrid3() {
+        String tcStr  = (tcCutNull == "False") ? tcCut : tcLvl;
+        int32_t tcCol  = (tcAct  == "1") ? TFT_YELLOW : 0xC600;
+        int32_t absCol = (absAct == "1") ? 0x001F     : 0x0018;
+
+        // Reifentemperaturen: Dezimalpunkte entfernen
+        String flStr, frStr, rlStr, rrStr;
+        for (int i = 0; i < (int)tyreFL.length(); i++) if (tyreFL[i] != '.') flStr += tyreFL[i];
+        for (int i = 0; i < (int)tyreFR.length(); i++) if (tyreFR[i] != '.') frStr += tyreFR[i];
+        for (int i = 0; i < (int)tyreRL.length(); i++) if (tyreRL[i] != '.') rlStr += tyreRL[i];
+        for (int i = 0; i < (int)tyreRR.length(); i++) if (tyreRR[i] != '.') rrStr += tyreRR[i];
+
+        // FL — Zeile 0, Spalte 0 (links)
+        if (fieldChanged(fTFL, flStr, TFT_WHITE)) {
+            int y0 = LAYOUT3_GRID_Y + 0 * LAYOUT3_ROW_H;
+            tft.fillRect(1, y0 + 20, W / 3 - 2, 28, C_BG);
+            tft.setTextColor(TFT_WHITE, C_BG);
+            tft.drawCentreString(flStr, W / 6, y0 + 24, 3);
+        }
+        // FR — Zeile 0, Spalte 2 (rechts)
+        if (fieldChanged(fTFR, frStr, TFT_WHITE)) {
+            int y0 = LAYOUT3_GRID_Y + 0 * LAYOUT3_ROW_H;
+            tft.fillRect(W * 2 / 3 + 1, y0 + 20, W / 3 - 2, 28, C_BG);
+            tft.setTextColor(TFT_WHITE, C_BG);
+            tft.drawCentreString(frStr, W * 5 / 6, y0 + 24, 3);
+        }
+        // TC — Zeile 1, Spalte 0
+        if (fieldChanged(fTC, tcStr, tcCol)) {
+            int y0 = LAYOUT3_GRID_Y + 1 * LAYOUT3_ROW_H;
+            tft.fillRect(1, y0 + 20, W / 3 - 2, 28, C_BG);
+            tft.setTextColor(tcCol, C_BG);
+            tft.drawCentreString(tcStr, W / 6, y0 + 24, 3);
+        }
+        // ABS — Zeile 1, Spalte 2
+        if (fieldChanged(fABS, absLvl, absCol)) {
+            int y0 = LAYOUT3_GRID_Y + 1 * LAYOUT3_ROW_H;
+            tft.fillRect(W * 2 / 3 + 1, y0 + 20, W / 3 - 2, 28, C_BG);
+            tft.setTextColor(absCol, C_BG);
+            tft.drawCentreString(absLvl, W * 5 / 6, y0 + 24, 3);
+        }
+        // BB — Zeile 2, Spalte 0
+        if (fieldChanged(fBB, bb, TFT_MAGENTA)) {
+            int y0 = LAYOUT3_GRID_Y + 2 * LAYOUT3_ROW_H;
+            tft.fillRect(1, y0 + 20, W / 3 - 2, 28, C_BG);
+            tft.setTextColor(TFT_MAGENTA, C_BG);
+            tft.drawCentreString(bb, W / 6, y0 + 24, 3);
+        }
+        // RL — Zeile 3, Spalte 0
+        if (fieldChanged(fTRL, rlStr, TFT_WHITE)) {
+            int y0 = LAYOUT3_GRID_Y + 3 * LAYOUT3_ROW_H;
+            tft.fillRect(1, y0 + 20, W / 3 - 2, 28, C_BG);
+            tft.setTextColor(TFT_WHITE, C_BG);
+            tft.drawCentreString(rlStr, W / 6, y0 + 24, 3);
+        }
+        // RR — Zeile 3, Spalte 2
+        if (fieldChanged(fTRR, rrStr, TFT_WHITE)) {
+            int y0 = LAYOUT3_GRID_Y + 3 * LAYOUT3_ROW_H;
+            tft.fillRect(W * 2 / 3 + 1, y0 + 20, W / 3 - 2, 28, C_BG);
+            tft.setTextColor(TFT_WHITE, C_BG);
+            tft.drawCentreString(rrStr, W * 5 / 6, y0 + 24, 3);
+        }
     }
 
     // ── Tyre Temperatures (Layout 1 only) ───────────────────────
@@ -556,21 +663,22 @@ public:
         drawSpeed();
 
         int32_t lapCol = (lapInv == "True") ? TFT_RED : TFT_WHITE;
-        drawLap(fCLap, curLap,  CLAP_Y, CLAP_H, lapCol);
-        drawLap(fBLap, bestLap, BLAP_Y, BLAP_H, TFT_CYAN);
+        drawLap(fCLap, curLap, CLAP_Y, CLAP_H, lapCol);
+        if (BLAP_Y >= 0)
+            drawLap(fBLap, bestLap, BLAP_Y, BLAP_H, TFT_CYAN);
 
         drawDelta();
 
-        String  tcStr  = (tcCutNull == "False") ? tcCut : tcLvl;
-        int32_t tcCol  = (tcAct  == "1") ? TFT_YELLOW : 0xC600;
-        int32_t absCol = (absAct == "1") ? 0x001F     : 0x0018;
-
-        drawAssist(fTC,  tcStr,  tcCol,       1);
-        drawAssist(fABS, absLvl, absCol,      2);
-        drawAssist(fBB,  bb,     TFT_MAGENTA, 3);
-
-        // Tyre Temperatures zeichnen (nur in Layout 1)
-        // drawTyreTemps();
+        if (currentLayout == 2) {
+            drawGrid3();
+        } else {
+            String  tcStr  = (tcCutNull == "False") ? tcCut : tcLvl;
+            int32_t tcCol  = (tcAct  == "1") ? TFT_YELLOW : 0xC600;
+            int32_t absCol = (absAct == "1") ? 0x001F     : 0x0018;
+            drawAssist(fTC,  tcStr,  tcCol,       1);
+            drawAssist(fABS, absLvl, absCol,      2);
+            drawAssist(fBB,  bb,     TFT_MAGENTA, 3);
+        }
     }
 
 
